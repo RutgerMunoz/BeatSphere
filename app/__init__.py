@@ -1,0 +1,1 @@
+"""BeatSphere application package."""
