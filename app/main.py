@@ -12,6 +12,7 @@ from kivy.uix.slider import Slider
 from kivy.uix.stacklayout import StackLayout
 from kivy.uix.textinput import TextInput
 
+from app.background_playback import AndroidBackgroundPlaybackController
 from app.music_library import scan_music_files
 from app.player_state import PlayerState
 
@@ -53,6 +54,7 @@ class BeatSphereApp(App):
         self.state = PlayerState()
         self.sound = None
         self.search_query = ''
+        self.background_playback = AndroidBackgroundPlaybackController({'WAKE_LOCK', 'READ_EXTERNAL_STORAGE'})
 
         self.root = BoxLayout(orientation='vertical', spacing=18, padding=[24, 24, 24, 24])
         self.root.bind(size=self._update_background, pos=self._update_background)
@@ -234,9 +236,30 @@ class BeatSphereApp(App):
 
         self.sound.play()
         self.state.playing = True
+        self.state.background_playing = self.background_playback.prepare_for_background_play(
+            self.state.current_track(), {'state': 'playing'}
+        )['should_keep_playing']
         self.play_btn.text = '⏸'
         self.status_label.text = f'Playing: {self.state.current_track_title()}'
         Clock.schedule_interval(self._update_progress, 0.2)
+
+    def on_pause(self):
+        if self.sound is not None and self.sound.state == 'play':
+            prepared = self.background_playback.prepare_for_background_play(
+                self.state.current_track(), {'state': 'playing'}
+            )
+            if prepared['background_mode'] == 'enabled':
+                self.state.background_playing = True
+                self.status_label.text = 'Background playback enabled'
+                return True
+            self.pause_current()
+            return True
+        return False
+
+    def on_resume(self):
+        if self.state.background_playing and self.state.current_track():
+            self.status_label.text = f'Resumed: {self.state.current_track_title()}'
+        return True
 
     def pause_current(self):
         if self.sound is not None:
