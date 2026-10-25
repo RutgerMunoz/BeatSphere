@@ -13,6 +13,7 @@ from kivy.uix.stacklayout import StackLayout
 from kivy.uix.textinput import TextInput
 
 from app.background_playback import AndroidBackgroundPlaybackController
+from app.favorite_playlist_ui import FavoritePlaylistScreen
 from app.music_library import scan_music_files
 from app.now_playing_card import NowPlayingCard
 from app.player_state import PlayerState
@@ -106,6 +107,10 @@ class BeatSphereApp(App):
         self.search_input.bind(text=self.filter_tracks)
         self.root.add_widget(self.search_input)
 
+        self.library_screen = FavoritePlaylistScreen()
+        self.library_label = Label(text='Favorites • Playlists • Recently Played', size_hint_y=None, height=28)
+        self.root.add_widget(self.library_label)
+
         self.status_label = Label(text='Ready to play', size_hint_y=None, height=28)
         self.root.add_widget(self.status_label)
 
@@ -142,6 +147,7 @@ class BeatSphereApp(App):
             self.album_label,
             self.duration_label,
             self.now_playing_label,
+            self.library_label,
             self.status_label,
             self.search_input,
             self.progress,
@@ -188,6 +194,10 @@ class BeatSphereApp(App):
         ]
         tracks = scan_music_files(roots)
         self.state.set_tracks([track.path for track in tracks])
+        self.library_screen.playlists = ['Favorites', 'Chill Mix', 'Workout']
+        self.library_screen.favorite_tracks = [track.path for track in tracks[:3]]
+        self.library_screen.recent_tracks = [track.path for track in tracks[:5]]
+        self.library_label.text = 'Favorites • Playlists • Recently Played'
         self.render_tracks(tracks)
 
         self.now_playing_card = NowPlayingCard(
