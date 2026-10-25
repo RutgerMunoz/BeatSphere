@@ -14,6 +14,7 @@ from kivy.uix.textinput import TextInput
 
 from app.background_playback import AndroidBackgroundPlaybackController
 from app.music_library import scan_music_files
+from app.now_playing_card import NowPlayingCard
 from app.player_state import PlayerState
 
 THEMES = {
@@ -68,28 +69,37 @@ class BeatSphereApp(App):
         self.header.add_widget(self.theme_toggle)
         self.root.add_widget(self.header)
 
-        self.hero_card = BoxLayout(orientation='vertical', size_hint_y=None, height=180, spacing=10, padding=18)
+        self.hero_card = BoxLayout(orientation='vertical', size_hint_y=None, height=220, spacing=10, padding=18)
         self.now_playing_label = Label(text='Now Playing', font_size='18sp', halign='left')
-        self.track_title = Label(text='Select a song', font_size='24sp', bold=True, halign='left', valign='middle')
-        self.track_artist = Label(text='Your library', halign='left')
+        self.track_title = Label(text='Select a song', font_size='26sp', bold=True, halign='left', valign='middle')
+        self.track_artist = Label(text='Your library', halign='left', font_size='16sp')
+        self.album_label = Label(text='BeatSphere', halign='left', font_size='14sp')
+        self.duration_label = Label(text='0:00', halign='right', font_size='14sp')
         self.hero_card.add_widget(self.now_playing_label)
         self.hero_card.add_widget(self.track_title)
         self.hero_card.add_widget(self.track_artist)
+        self.hero_card.add_widget(self.album_label)
         self.root.add_widget(self.hero_card)
 
         self.progress = Slider(min=0, max=100, value=0, disabled=True)
         self.root.add_widget(self.progress)
 
-        self.controls = BoxLayout(size_hint_y=None, height=70, spacing=14)
+        self.controls = BoxLayout(size_hint_y=None, height=82, spacing=14)
+        self.shuffle_btn = Button(text='⇄', font_size='20sp')
         self.prev_btn = Button(text='⏮', font_size='22sp')
         self.play_btn = Button(text='▶', font_size='22sp')
         self.next_btn = Button(text='⏭', font_size='22sp')
+        self.repeat_btn = Button(text='↻', font_size='20sp')
+        self.shuffle_btn.bind(on_press=self.shuffle_tracks)
         self.prev_btn.bind(on_press=self.previous_track)
         self.play_btn.bind(on_press=self.play_current)
         self.next_btn.bind(on_press=self.next_track)
+        self.repeat_btn.bind(on_press=self.toggle_repeat)
+        self.controls.add_widget(self.shuffle_btn)
         self.controls.add_widget(self.prev_btn)
         self.controls.add_widget(self.play_btn)
         self.controls.add_widget(self.next_btn)
+        self.controls.add_widget(self.repeat_btn)
         self.root.add_widget(self.controls)
 
         self.search_input = TextInput(hint_text='Search your music...', multiline=False, size_hint_y=None, height=52)
@@ -129,6 +139,8 @@ class BeatSphereApp(App):
             self.title_label,
             self.track_title,
             self.track_artist,
+            self.album_label,
+            self.duration_label,
             self.now_playing_label,
             self.status_label,
             self.search_input,
@@ -150,7 +162,7 @@ class BeatSphereApp(App):
         self.search_input.foreground_color = palette['text']
         self.search_input.cursor_color = palette['primary']
 
-        for button in [self.theme_toggle, self.prev_btn, self.play_btn, self.next_btn]:
+        for button in [self.theme_toggle, self.shuffle_btn, self.prev_btn, self.play_btn, self.next_btn, self.repeat_btn]:
             button.background_color = palette['surface_alt']
             button.color = palette['text']
 
@@ -178,10 +190,19 @@ class BeatSphereApp(App):
         self.state.set_tracks([track.path for track in tracks])
         self.render_tracks(tracks)
 
+        self.now_playing_card = NowPlayingCard(
+            title='Select a song',
+            artist='Your BeatSphere library',
+            album='BeatSphere',
+            duration='0:00',
+        )
+
         if self.state.track_paths:
             self.state.select_track(self.state.track_paths[0])
             self.track_title.text = self.state.current_track_title()
             self.track_artist.text = 'Your BeatSphere library'
+            self.album_label.text = 'BeatSphere'
+            self.duration_label.text = '0:00'
 
     def render_tracks(self, tracks):
         self.track_list.clear_widgets()
@@ -219,7 +240,15 @@ class BeatSphereApp(App):
         title = self.state.current_track_title()
         self.track_title.text = title
         self.track_artist.text = 'Now playing from your library'
+        self.album_label.text = 'BeatSphere'
+        self.duration_label.text = '0:00'
         self.status_label.text = f'Selected: {title}'
+        self.now_playing_card = NowPlayingCard(
+            title=title,
+            artist='Now playing from your library',
+            album='BeatSphere',
+            duration='0:00',
+        )
         self.play_current(None)
 
     def play_current(self, instance):
@@ -240,6 +269,7 @@ class BeatSphereApp(App):
             self.state.current_track(), {'state': 'playing'}
         )['should_keep_playing']
         self.play_btn.text = '⏸'
+        self.duration_label.text = self.now_playing_card.duration
         self.status_label.text = f'Playing: {self.state.current_track_title()}'
         Clock.schedule_interval(self._update_progress, 0.2)
 
@@ -267,6 +297,15 @@ class BeatSphereApp(App):
             self.state.playing = False
             self.play_btn.text = '▶'
             self.status_label.text = f'Paused: {self.state.current_track_title()}'
+
+    def shuffle_tracks(self, instance):
+        self.state.track_paths = self.state.track_paths[::-1]
+        self.state.current_index = 0
+        self.status_label.text = 'Shuffled your library'
+
+    def toggle_repeat(self, instance):
+        self.state.background_playing = not self.state.background_playing
+        self.status_label.text = 'Repeat mode toggled'
 
     def _update_progress(self, dt):
         if self.sound is None or not self.sound.state == 'play':
