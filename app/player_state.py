@@ -9,6 +9,7 @@ class PlayerState:
     track_paths: list[str] = field(default_factory=list)
     current_index: int = -1
     playing: bool = False
+    background_playing: bool = False
 
     def set_tracks(self, tracks: list[str]) -> None:
         self.track_paths = list(tracks)
