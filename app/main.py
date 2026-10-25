@@ -107,6 +107,17 @@ class BeatSphereApp(App):
         self.search_input.bind(text=self.filter_tracks)
         self.root.add_widget(self.search_input)
 
+        self.library_controls = BoxLayout(size_hint_y=None, height=52, spacing=10)
+        self.favorite_btn = Button(text='♡ Favorite', size_hint_x=0.55)
+        self.new_playlist_input = TextInput(hint_text='Create playlist', multiline=False, size_hint_x=1.1, height=42)
+        self.create_playlist_btn = Button(text='Create', size_hint_x=0.45)
+        self.favorite_btn.bind(on_press=self.toggle_current_favorite)
+        self.create_playlist_btn.bind(on_press=self.create_playlist)
+        self.library_controls.add_widget(self.favorite_btn)
+        self.library_controls.add_widget(self.new_playlist_input)
+        self.library_controls.add_widget(self.create_playlist_btn)
+        self.root.add_widget(self.library_controls)
+
         self.library_screen = FavoritePlaylistScreen()
         self.library_label = Label(text='Favorites • Playlists • Recently Played', size_hint_y=None, height=28)
         self.root.add_widget(self.library_label)
@@ -186,6 +197,31 @@ class BeatSphereApp(App):
         self.state.toggle_theme()
         self.apply_theme()
 
+    def create_playlist(self, instance):
+        playlist_name = (self.new_playlist_input.text or '').strip()
+        if not playlist_name:
+            self.status_label.text = 'Enter a playlist name first'
+            return
+        if self.library_screen.create_playlist(playlist_name):
+            self.status_label.text = f'Created playlist: {playlist_name}'
+            self.new_playlist_input.text = ''
+            self.library_label.text = 'Favorites • Playlists • Recently Played'
+        else:
+            self.status_label.text = 'Playlist name is required'
+
+    def toggle_current_favorite(self, instance):
+        current_track = self.state.current_track()
+        if not current_track:
+            self.status_label.text = 'Select a track to favorite'
+            return
+        is_favorite = self.library_screen.toggle_favorite(current_track)
+        self.favorite_btn.text = '♥ Favorited' if is_favorite else '♡ Favorite'
+        self.status_label.text = (
+            f'Added to favorites: {self.state.current_track_title()}'
+            if is_favorite
+            else f'Removed from favorites: {self.state.current_track_title()}'
+        )
+
     def load_tracks(self):
         roots = [
             Path.home() / 'Music',
@@ -253,6 +289,11 @@ class BeatSphereApp(App):
         self.album_label.text = 'BeatSphere'
         self.duration_label.text = '0:00'
         self.status_label.text = f'Selected: {title}'
+        self.library_screen.add_recent_track(track_path)
+        if self.state.current_track() in self.library_screen.favorite_tracks:
+            self.favorite_btn.text = '♥ Favorited'
+        else:
+            self.favorite_btn.text = '♡ Favorite'
         self.now_playing_card = NowPlayingCard(
             title=title,
             artist='Now playing from your library',
