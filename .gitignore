@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Environment
+.env
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kivy / packaging
+.cache/
+.pybuilder/
+
+# Local media cache
+media/
