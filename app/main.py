@@ -3,9 +3,11 @@ from pathlib import Path
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.audio import SoundLoader
+from kivy.core.image import Image as CoreImage
 from kivy.graphics import Color, Rectangle
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
+from kivy.uix.image import Image
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.slider import Slider
@@ -122,6 +124,10 @@ class BeatSphereApp(App):
         self.library_label = Label(text='Favorites • Playlists • Recently Played', size_hint_y=None, height=28)
         self.root.add_widget(self.library_label)
 
+        self.playlist_cards_container = StackLayout(size_hint_y=None, spacing=12, padding=[0, 6, 0, 6])
+        self.playlist_cards_container.bind(minimum_height=self.playlist_cards_container.setter('height'))
+        self.root.add_widget(self.playlist_cards_container)
+
         self.status_label = Label(text='Ready to play', size_hint_y=None, height=28)
         self.root.add_widget(self.status_label)
 
@@ -206,8 +212,36 @@ class BeatSphereApp(App):
             self.status_label.text = f'Created playlist: {playlist_name}'
             self.new_playlist_input.text = ''
             self.library_label.text = 'Favorites • Playlists • Recently Played'
+            self.render_playlist_cards()
         else:
             self.status_label.text = 'Playlist name is required'
+
+    def render_playlist_cards(self):
+        self.playlist_cards_container.clear_widgets()
+        for card in self.library_screen.playlist_cards:
+            cover = BoxLayout(size_hint=(None, None), width=150, height=120)
+            cover.canvas.before.clear()
+            cover_color = card.get('cover_color', (60, 120, 255, 255))
+            with cover.canvas.before:
+                Color(*[value / 255 for value in cover_color[:3]] + [cover_color[3] / 255])
+                Rectangle(pos=cover.pos, size=cover.size)
+
+            cover_image = card.get('cover_path')
+            if cover_image:
+                try:
+                    image_widget = Image(source=str(cover_image), allow_stretch=True, keep_ratio=True)
+                    image_widget.size = (150, 120)
+                    cover.add_widget(image_widget)
+                except Exception:
+                    cover.add_widget(Label(text='♪', font_size='28sp', color=(1, 1, 1, 1)))
+            else:
+                cover.add_widget(Label(text='♪', font_size='28sp', color=(1, 1, 1, 1)))
+
+            card_layout = BoxLayout(orientation='vertical', size_hint=(None, None), width=150, height=170, spacing=6)
+            card_layout.add_widget(cover)
+            card_layout.add_widget(Label(text=card['name'], font_size='14sp', halign='left', valign='top', shorten=True, size=(150, 28)))
+            card_layout.add_widget(Label(text=f"{card['track_count']} tracks", font_size='12sp', color=(0.75, 0.8, 0.9, 1)))
+            self.playlist_cards_container.add_widget(card_layout)
 
     def toggle_current_favorite(self, instance):
         current_track = self.state.current_track()
@@ -233,8 +267,17 @@ class BeatSphereApp(App):
         self.library_screen.playlists = ['Favorites', 'Chill Mix', 'Workout']
         self.library_screen.favorite_tracks = [track.path for track in tracks[:3]]
         self.library_screen.recent_tracks = [track.path for track in tracks[:5]]
+        self.library_screen.create_playlist('Favorites', cover_color=(65, 125, 255, 255))
+        self.library_screen.create_playlist('Chill Mix', cover_color=(80, 170, 255, 255))
+        self.library_screen.create_playlist('Workout', cover_color=(20, 90, 180, 255))
+        for playlist_name in self.library_screen.playlists:
+            if playlist_name in {'Favorites', 'Chill Mix', 'Workout'}:
+                existing_tracks = [track.path for track in tracks[:min(len(tracks), 3)]]
+                for track_path in existing_tracks:
+                    self.library_screen.add_track_to_playlist(playlist_name, track_path)
         self.library_label.text = 'Favorites • Playlists • Recently Played'
         self.render_tracks(tracks)
+        self.render_playlist_cards()
 
         self.now_playing_card = NowPlayingCard(
             title='Select a song',

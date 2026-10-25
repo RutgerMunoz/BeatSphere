@@ -21,7 +21,7 @@ class Track:
 
 def _normalize_title(file_path: Path) -> str:
     title = file_path.stem.replace('_', ' ').replace('-', ' ')
-    return ' '.join(part.capitalize() for part in title.split())
+    return ' '.join(part.lower() for part in title.split())
 
 
 def scan_music_files(search_roots: Iterable[str | Path]) -> list[Track]:

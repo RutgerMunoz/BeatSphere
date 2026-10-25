@@ -26,3 +26,16 @@ def test_favorites_playlist_screen_creates_playlists_and_favorites():
 
     assert screen.toggle_favorite(track_path) is False
     assert track_path not in screen.favorite_tracks
+
+
+def test_favorites_playlist_screen_builds_album_art_cards_for_playlists():
+    screen = FavoritePlaylistScreen()
+    screen.create_playlist('Late Night', cover_color=(20, 60, 120, 255), cover_path='/covers/late-night.jpg')
+    screen.add_track_to_playlist('Late Night', '/music/track-01.mp3')
+    screen.add_track_to_playlist('Late Night', '/music/track-02.mp3')
+
+    card = screen.playlist_cards[0]
+    assert card['name'] == 'Late Night'
+    assert card['track_count'] == 2
+    assert card['cover_path'] == '/covers/late-night.jpg'
+    assert card['cover_color'] == (20, 60, 120, 255)
