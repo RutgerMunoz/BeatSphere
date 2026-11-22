@@ -21,7 +21,7 @@ from kivy.metrics import dp
 from kivy.properties import BooleanProperty, ListProperty, NumericProperty, ObjectProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.image import Image
+from kivy.uix.image import AsyncImage
 from kivy.uix.label import Label
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview import RecycleView
@@ -644,8 +644,8 @@ class AlbumArt(Widget):
         self._art.pos, self._art.size, self._art.radius = (cx - art / 2, cy - art / 2), (art, art), [art * 0.18]
 
 
-class ImageButton(ButtonBehavior, Image):
-    """Tappable thumbnail (wallpaper picker)."""
+class ImageButton(ButtonBehavior, AsyncImage):
+    """Tappable thumbnail (wallpaper/cover picker); photos decode on a background thread, not the UI's."""
 
     def on_press(self):
         animate(self, 0.08, opacity=0.6)

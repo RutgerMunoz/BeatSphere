@@ -19,6 +19,7 @@ from types import SimpleNamespace
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.logger import Logger
 from kivy.graphics import Color, Rectangle
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, DictProperty, StringProperty
@@ -39,7 +40,7 @@ from app.background_playback import AndroidBackgroundPlaybackController
 from app.favorite_playlist_ui import FavoritePlaylistScreen
 from app.library_views import (LETTERS, apply_custom_order, filter_tracks, fmt_time, group_by_folder, make_mix,
                                sort_tracks)
-from app.music_library import extract_cover, read_metadata, scan_music_files
+from app.music_library import extract_cover, read_metadata, scan_music_files, tracks_from_index
 from app.player_state import PlayerState
 from app.library_views import find_images
 from app.ui.brand import WORDMARK, IntroOverlay, LivingLogo
@@ -50,6 +51,7 @@ from app.ui.theme import FONT_CHOICES, ICON_FONT, THEMES, songs_label
 from app.ui.widgets import (Card, ImageButton, NavBar, PlaylistTile, Pressable, SongList, ThemedInput, ThemedLabel,
                             ThemeSwatch, animate, gradient_texture)
 
+HEADER_HEIGHT = dp(56)
 TABS = [('Songs', '♫'), ('Playlists', '☰'), ('Folders', '▤'), ('Mix', '⇄'), ('Settings', '⚙')]
 
 
@@ -74,12 +76,15 @@ class BeatSphereApp(App):
         self.player = create_player(on_complete=self._song_finished_in_background)
         self.in_background = False  # Kivy's clock doesn't run while the app is in the background
         self.ui_stale = False  # the screen needs a refresh after background playback changes
-        self.media = create_media_controls(self.on_media_command, 'assets/icon.png')
+        self.media = None  # notification/lock-screen controls, created on first play (Android setup is slow)
         self.loaded_path = None
         self.tracks = []
         self.titles = {}
         self.meta = {}
         self.covers = {}
+        self.meta_store = JsonStore(os.path.join(self.user_data_dir, 'song_info.json'))
+        self.song_info = dict(self.meta_store.get('songs')['info']) if self.meta_store.exists('songs') else {}
+        self.wallpapers_loaded = False
         self.custom_covers = {}  # song path -> user-chosen image
         self.playlist_covers = {}  # playlist name -> user-chosen image
         self.custom_titles = {}  # song path -> name the user gave it (the file itself is never renamed)
@@ -106,7 +111,8 @@ class BeatSphereApp(App):
         self.bind(palette=self._draw_background)
 
         column = BoxLayout(orientation='vertical', padding=[dp(14), dp(12), dp(14), dp(10)], spacing=dp(10))
-        column.add_widget(self._build_header())
+        self.header = self._build_header()
+        column.add_widget(self.header)
         self.pages = {'Songs': self._build_songs(), 'Playlists': self._page(), 'Folders': self._page(),
                       'Mix': self._build_mix(), 'Settings': self._build_settings()}
         self.content = BoxLayout()
@@ -125,7 +131,8 @@ class BeatSphereApp(App):
         self.intro = IntroOverlay(on_done=self.root.remove_widget) if self.motion else None
         if self.intro:
             self.root.add_widget(self.intro)
-        self.load_tracks()
+        self.song_count.text = 'Loading your music…'
+        self.started_at = time.time()
         Clock.schedule_interval(self._tick, 0.25)
         Window.bind(on_keyboard=self._on_keyboard)
         if platform == 'android':
@@ -135,7 +142,7 @@ class BeatSphereApp(App):
     # ---------- layout ----------
 
     def _build_header(self):
-        header = BoxLayout(size_hint_y=None, height=dp(56), spacing=dp(12))
+        header = BoxLayout(size_hint_y=None, height=HEADER_HEIGHT, spacing=dp(12))
         header.add_widget(LivingLogo(size_hint_x=None, width=dp(52)))
         texts = BoxLayout(orientation='vertical')
         hour = datetime.now().hour
@@ -151,9 +158,27 @@ class BeatSphereApp(App):
     def _page(self):
         return BoxLayout(orientation='vertical', spacing=dp(10))
 
+    def watch_scroll(self, view):
+        """Hides the header while a list is scrolled down; shows it again at the very top."""
+        view.bind(scroll_y=lambda *_: self._on_scroll(view))
+        return view
+
+    def _on_scroll(self, view):
+        if view.children and view.children[0].height > view.height:  # lists too short to scroll keep the header
+            self.set_header_visible(view.scroll_y >= 0.995)
+
+    def set_header_visible(self, visible):
+        target = HEADER_HEIGHT if visible else 0
+        if getattr(self, '_header_target', HEADER_HEIGHT) != target:
+            self._header_target = target
+            animate(self.header, 0.25, 'out_cubic', height=target, opacity=1 if visible else 0)
+
     def show_tab(self, name):
         """Switches tabs with a slide-and-fade entrance."""
         self.back_action = None
+        self.set_header_visible(True)
+        if name == 'Settings' and not self.wallpapers_loaded:
+            self.render_wallpapers()
         if name in ('Playlists', 'Folders'):
             (self.render_playlists if name == 'Playlists' else self.render_folders)()
         self.nav.select(name)
@@ -168,6 +193,7 @@ class BeatSphereApp(App):
     def make_song_list(self, playlist=None, on_reorder=None):
         songs = SongList(self.play_path, on_hold=lambda path: self.song_options(path, playlist), on_reorder=on_reorder)
         self.song_lists.add(songs)
+        self.watch_scroll(songs)
         return songs
 
     def _build_songs(self):
@@ -312,7 +338,6 @@ class BeatSphereApp(App):
         box.add_widget(self.wallpaper_grid)
         self.wallpaper_hint = ThemedLabel(text='', role='muted', font_size='13sp', size_hint_y=None, height=dp(24))
         box.add_widget(self.wallpaper_hint)
-        self.render_wallpapers()
 
         box.add_widget(self._section('Music library'))
         scan_btn = Pressable(text=icon_text('↻', 'Scan for music'), markup=True, size_hint_y=None, height=dp(46),
@@ -336,13 +361,13 @@ class BeatSphereApp(App):
         about.add_widget(Image(source='assets/icon.png', size_hint_x=None, width=dp(52)))
         about_texts = BoxLayout(orientation='vertical')
         about_texts.add_widget(ThemedLabel(text='BeatSphere', bold=True, font_size='16sp'))
-        about_texts.add_widget(ThemedLabel(text='Version 1.0.0', role='muted', font_size='12sp'))
+        about_texts.add_widget(ThemedLabel(text='Version 1.0.1', role='muted', font_size='12sp'))
         about.add_widget(about_texts)
         box.add_widget(Widget(size_hint_y=None, height=dp(6)))
         box.add_widget(about)
         scroll.add_widget(box)
         page = self._page()
-        page.add_widget(scroll)
+        page.add_widget(self.watch_scroll(scroll))
         return page
 
     def _section(self, text):
@@ -401,8 +426,10 @@ class BeatSphereApp(App):
 
     def request_android_permissions(self):
         """Asks for audio and image access at runtime (READ_MEDIA_* on Android 13+, storage before that)."""
-        from android.permissions import Permission, request_permissions
+        from android.permissions import Permission, check_permission, request_permissions
 
+        self.had_music_access = any(check_permission(p) for p in
+                                    (Permission.READ_MEDIA_AUDIO, Permission.READ_EXTERNAL_STORAGE))
         request_permissions(
             [Permission.READ_MEDIA_AUDIO, Permission.READ_MEDIA_IMAGES,
              Permission.READ_EXTERNAL_STORAGE, Permission.POST_NOTIFICATIONS],
@@ -411,13 +438,29 @@ class BeatSphereApp(App):
 
     def _on_android_permissions(self, permissions, grants):
         """Rescans once access is granted; the callback runs off the UI thread."""
-        if any(grants):
-            Clock.schedule_once(lambda dt: (self.load_tracks(), self.render_wallpapers()))
+        if any(grants) and not self.had_music_access:  # already allowed: the startup scan saw everything
+            Clock.schedule_once(lambda dt: (self.load_tracks(),
+                                            self.render_wallpapers() if self.wallpapers_loaded else None))
 
     def load_tracks(self):
         """Scans the device, refreshes the tabs, then reads artist tags in the background."""
-        tracks = [track for track in scan_music_files(self.music_roots(), self._indexed_songs())
-                  if track.path not in self.hidden]
+        indexed = self._indexed_songs()
+        if indexed:
+            found = tracks_from_index(indexed)
+            threading.Thread(target=self._add_unindexed, args=(found,), daemon=True).start()
+        else:
+            found = scan_music_files(self.music_roots())
+        self._show_tracks(found)
+
+    def _add_unindexed(self, found):
+        """Folder walk after the fast list: adds songs Android hasn't finished indexing (new downloads)."""
+        known = {track.path for track in found}
+        extra = [track for track in scan_music_files(self.music_roots()) if track.path not in known]
+        if extra:
+            Clock.schedule_once(lambda dt: self._show_tracks(found + extra))
+
+    def _show_tracks(self, found):
+        tracks = [track for track in found if track.path not in self.hidden]
         self.file_titles = {track.path: track.title for track in tracks}
         for track in tracks:
             track.title = self.custom_titles.get(track.path, track.title)
@@ -426,6 +469,7 @@ class BeatSphereApp(App):
         if not self.state.track_paths:
             self.state.set_tracks([track.path for track in self.tracks])
         self.render_songs()
+        Logger.info('BeatSphere: %d songs listed %.1fs after start', len(self.tracks), time.time() - self.started_at)
         threading.Thread(target=self._read_all_metadata, args=(list(self.tracks),), daemon=True).start()
 
     def _indexed_songs(self):
@@ -452,10 +496,26 @@ class BeatSphereApp(App):
         pick_image_from_system(folder, lambda path: Clock.schedule_once(lambda dt: on_picked(path) if path else None))
 
     def _read_all_metadata(self, tracks):
+        """Artist/album/length and embedded cover per song, cached between launches by file size and date."""
+        changed = False
         for track in tracks:
-            if track.path not in self.meta:
+            try:
+                stat = os.stat(track.path)
+            except OSError:
+                continue
+            stamp = [stat.st_size, int(stat.st_mtime)]
+            cached = self.song_info.get(track.path)
+            if cached and cached['stamp'] == stamp and (not cached['cover'] or os.path.exists(cached['cover'])):
+                self.meta[track.path] = cached['meta']
+                self.covers.setdefault(track.path, cached['cover'])
+            else:
                 self.meta[track.path] = read_metadata(track.path)
-            self.cover_for(track.path)  # embedded art -> list avatars
+                cover = self.cover_for(track.path)  # embedded art -> list avatars
+                self.song_info[track.path] = {'stamp': stamp, 'meta': self.meta[track.path], 'cover': cover}
+                changed = True
+                time.sleep(0.002)  # yield to the UI thread between files
+        if changed:
+            Clock.schedule_once(lambda dt: self.meta_store.put('songs', info=self.song_info))
         Clock.schedule_once(lambda dt: self.refresh_lists())
 
     def refresh_lists(self):
@@ -516,7 +576,7 @@ class BeatSphereApp(App):
             grid.add_widget(tile)
         scroll = ScrollView(do_scroll_x=False, bar_width=dp(3))
         scroll.add_widget(grid)
-        page.add_widget(scroll)
+        page.add_widget(self.watch_scroll(scroll))
 
     def reorder_playlists(self):
         """Shows the playlists as a list with ≡ handles; drag to set their order."""
@@ -658,7 +718,7 @@ class BeatSphereApp(App):
             column.add_widget(ThemedLabel(text='No folders with music yet', role='muted', size_hint_y=None, height=dp(40)))
         scroll = ScrollView(do_scroll_x=False, bar_width=dp(3))
         scroll.add_widget(column)
-        page.add_widget(scroll)
+        page.add_widget(self.watch_scroll(scroll))
 
     def start_mix(self, source):
         all_paths = [track.path for track in self.tracks]
@@ -702,7 +762,8 @@ class BeatSphereApp(App):
         self.motion_btn.selected = self.motion
 
     def render_wallpapers(self):
-        """Shows the 30 newest device images as wallpaper choices."""
+        """Shows the 30 newest device images as wallpaper choices (thumbnails decode in the background)."""
+        self.wallpapers_loaded = True
         self.wallpaper_grid.clear_widgets()
         images = find_images(self.picture_roots(), limit=30)
         for image in images:
@@ -711,16 +772,17 @@ class BeatSphereApp(App):
             self.wallpaper_grid.add_widget(thumb)
         self.wallpaper_hint.text = '' if images else 'No pictures found in Pictures, DCIM or Download'
 
-    def _draw_background(self, *_):
+    def _draw_background(self, *_, full=False):
         """Theme gradient, then the wallpaper dimmed so text stays readable."""
         if self.root is None:
             return
+        self.background_ready = getattr(self, 'background_ready', False) or full
         self.root.canvas.before.clear()
         with self.root.canvas.before:
             Color(1, 1, 1, 1)
             Rectangle(pos=self.root.pos, size=self.root.size,
                       texture=gradient_texture(self.palette['bg2'], self.palette['bg']))
-            if self.wallpaper and os.path.exists(self.wallpaper):
+            if self.background_ready and self.wallpaper and os.path.exists(self.wallpaper):
                 Rectangle(pos=self.root.pos, size=self.root.size, source=self.wallpaper)
                 Color(*self.palette['bg'][:3], 0.55)
                 Rectangle(pos=self.root.pos, size=self.root.size)
@@ -1040,6 +1102,10 @@ class BeatSphereApp(App):
         path = self.state.current_track()
         if not path:
             return
+        if self.media is None:
+            if not self.state.playing:
+                return
+            self.media = create_media_controls(self.on_media_command, 'assets/icon.png')
         try:
             artist = self.meta.get(path, {}).get('artist') or self.folder_name(path)
             self.media.update(self.titles.get(path, Path(path).stem), artist, self.cover_for(path), self.state.playing,
@@ -1212,9 +1278,12 @@ class BeatSphereApp(App):
     def on_start(self):
         if self.intro:
             Clock.schedule_once(lambda dt: self.intro.begin(), 0.15)
+        Clock.schedule_once(lambda dt: self.load_tracks(), 0.1)  # after the first frame, so the screen shows at once
+        Clock.schedule_once(lambda dt: self._draw_background(full=True), 0.5)  # big wallpaper decode after that
 
     def on_stop(self):
-        self.media.release()
+        if self.media is not None:
+            self.media.release()
 
 
 if __name__ == '__main__':

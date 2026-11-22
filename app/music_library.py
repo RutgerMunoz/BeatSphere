@@ -37,16 +37,20 @@ def _normalize_title(file_path: Path) -> str:
     return ' '.join(title.split())
 
 
-def scan_music_files(search_roots: Iterable[str | Path], extra_files: Iterable[str] = ()) -> list[Track]:
+def tracks_from_index(paths: Iterable[str]) -> list[Track]:
+    """Tracks from Android's MediaStore paths, without touching each file (storage calls are slow on phones)."""
+    unique = dict.fromkeys(p for p in paths if Path(p).suffix.lower() in supported_extensions)
+    return sorted((Track(path=p, title=_normalize_title(Path(p))) for p in unique), key=lambda t: t.title.lower())
+
+
+def scan_music_files(search_roots: Iterable[str | Path]) -> list[Track]:
     """Walks local folders and returns audio files as Track objects.
 
     The function is the bridge between the filesystem and the player UI. It finds
     music files, ignores unsupported items, and sorts the list alphabetically.
-    `extra_files` are individual paths found elsewhere (Android's MediaStore index).
     """
     discovered: dict[str, Track] = {}
     candidates = [path for root in search_roots if Path(root).is_dir() for path in Path(root).rglob('*')]
-    candidates += [Path(path) for path in extra_files]
 
     for candidate in candidates:
         if candidate.suffix.lower() not in supported_extensions or not candidate.is_file():

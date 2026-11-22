@@ -61,15 +61,8 @@ def test_metadata_is_blank_for_untagged_files(tmp_path):
     assert extract_cover(str(song), tmp_path) is None
 
 
-def test_scan_merges_extra_files_without_duplicates(tmp_path):
-    folder = tmp_path / 'Music'
-    folder.mkdir()
-    (folder / 'a.mp3').write_text('audio')
-    elsewhere = tmp_path / 'WhatsApp' / 'Audio'
-    elsewhere.mkdir(parents=True)
-    (elsewhere / 'voice-song.opus').write_text('audio')
-    (elsewhere / 'notes.txt').write_text('text')
-    extra = [str(folder / 'a.mp3'), str(elsewhere / 'voice-song.opus'), str(elsewhere / 'notes.txt'),
-             str(tmp_path / 'deleted.mp3')]
-    titles = [t.title for t in scan_music_files([folder], extra)]
-    assert titles == ['a', 'voice song']
+def test_tracks_from_index_filters_types_dedupes_and_sorts():
+    from app.music_library import tracks_from_index
+
+    paths = ['/m/Zebra.mp3', '/w/voice-note.opus', '/d/notes.txt', '/m/Zebra.mp3', '/m/apple_pie.FLAC']
+    assert [t.title for t in tracks_from_index(paths)] == ['apple pie', 'voice note', 'Zebra']
