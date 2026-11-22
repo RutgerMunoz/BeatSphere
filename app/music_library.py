@@ -13,7 +13,7 @@ from typing import Iterable
 
 # Supported audio formats used by the app. The list keeps scanning lightweight and
 # avoids adding unsupported files like text documents or images.
-supported_extensions = {'.mp3', '.wav', '.ogg', '.m4a'}
+supported_extensions = {'.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac', '.opus'}
 
 
 @dataclass
@@ -37,32 +37,27 @@ def _normalize_title(file_path: Path) -> str:
     return ' '.join(title.split())
 
 
-def scan_music_files(search_roots: Iterable[str | Path]) -> list[Track]:
+def scan_music_files(search_roots: Iterable[str | Path], extra_files: Iterable[str] = ()) -> list[Track]:
     """Walks local folders and returns audio files as Track objects.
 
     The function is the bridge between the filesystem and the player UI. It finds
     music files, ignores unsupported items, and sorts the list alphabetically.
+    `extra_files` are individual paths found elsewhere (Android's MediaStore index).
     """
     discovered: dict[str, Track] = {}
+    candidates = [path for root in search_roots if Path(root).is_dir() for path in Path(root).rglob('*')]
+    candidates += [Path(path) for path in extra_files]
 
-    for root in search_roots:
-        root_path = Path(root)
-        if not root_path.exists() or not root_path.is_dir():
+    for candidate in candidates:
+        if candidate.suffix.lower() not in supported_extensions or not candidate.is_file():
             continue
 
-        for candidate in root_path.rglob('*'):
-            if not candidate.is_file():
-                continue
+        file_key = str(candidate.resolve())
+        if file_key in discovered:
+            continue
 
-            if candidate.suffix.lower() not in supported_extensions:
-                continue
-
-            file_key = str(candidate.resolve())
-            if file_key in discovered:
-                continue
-
-            title = _normalize_title(candidate)
-            discovered[file_key] = Track(path=file_key, title=title)
+        title = _normalize_title(candidate)
+        discovered[file_key] = Track(path=file_key, title=title)
 
     return sorted(discovered.values(), key=lambda item: item.title.lower())
 

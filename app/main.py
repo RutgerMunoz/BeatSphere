@@ -32,7 +32,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 from kivy.utils import platform
 
-from app.android_files import delete_audio_file
+from app.android_files import delete_audio_file, media_store_audio_paths, pick_image_from_system
 from app.audio import create_player
 from app.media_controls import create_media_controls
 from app.background_playback import AndroidBackgroundPlaybackController
@@ -210,6 +210,9 @@ class BeatSphereApp(App):
             self.sort_chips[mode] = chip
             order.add_widget(chip)
         order.add_widget(Widget())
+        scan = Pressable(text='↻', icon=True, font_size='20sp', size_hint_x=None, width=dp(44), radius=dp(19))
+        scan.bind(on_release=lambda *_: self.scan_library())
+        order.add_widget(scan)
         self.edit_order_btn = Pressable(text=icon_text('≡', 'Reorder'), markup=True, size_hint_x=None, width=dp(116),
                                         radius=dp(19))
         self.edit_order_btn.bind(on_release=lambda *_: self.toggle_song_editing())
@@ -294,9 +297,15 @@ class BeatSphereApp(App):
         box.add_widget(fonts)
 
         box.add_widget(self._section('Wallpaper'))
-        none_btn = Pressable(text='No wallpaper', size_hint_y=None, height=dp(46), radius=dp(18))
+        wall_row = BoxLayout(size_hint_y=None, height=dp(46), spacing=dp(8))
+        browse = Pressable(text='Photos, Drive, Gallery…', radius=dp(18), gradient=True, bold=True)
+        browse.bind(on_release=lambda *_: self.browse_system_photos(
+            os.path.join(self.user_data_dir, 'wallpapers'), lambda path: self.set_setting('wallpaper', path)))
+        none_btn = Pressable(text='No wallpaper', size_hint_x=0.6, radius=dp(18))
         none_btn.bind(on_release=lambda *_: self.set_setting('wallpaper', ''))
-        box.add_widget(none_btn)
+        wall_row.add_widget(browse)
+        wall_row.add_widget(none_btn)
+        box.add_widget(wall_row)
         self.wallpaper_grid = GridLayout(cols=3, size_hint_y=None, spacing=dp(8), row_default_height=dp(120),
                                          row_force_default=True)
         self.wallpaper_grid.bind(minimum_height=self.wallpaper_grid.setter('height'))
@@ -304,6 +313,12 @@ class BeatSphereApp(App):
         self.wallpaper_hint = ThemedLabel(text='', role='muted', font_size='13sp', size_hint_y=None, height=dp(24))
         box.add_widget(self.wallpaper_hint)
         self.render_wallpapers()
+
+        box.add_widget(self._section('Music library'))
+        scan_btn = Pressable(text=icon_text('↻', 'Scan for music'), markup=True, size_hint_y=None, height=dp(46),
+                             radius=dp(18))
+        scan_btn.bind(on_release=lambda *_: self.scan_library())
+        box.add_widget(scan_btn)
 
         box.add_widget(self._section('Hidden songs'))
         self.hidden_btn = Pressable(text='', size_hint_y=None, height=dp(46), radius=dp(18))
@@ -401,7 +416,8 @@ class BeatSphereApp(App):
 
     def load_tracks(self):
         """Scans the device, refreshes the tabs, then reads artist tags in the background."""
-        tracks = [track for track in scan_music_files(self.music_roots()) if track.path not in self.hidden]
+        tracks = [track for track in scan_music_files(self.music_roots(), self._indexed_songs())
+                  if track.path not in self.hidden]
         self.file_titles = {track.path: track.title for track in tracks}
         for track in tracks:
             track.title = self.custom_titles.get(track.path, track.title)
@@ -411,6 +427,29 @@ class BeatSphereApp(App):
             self.state.set_tracks([track.path for track in self.tracks])
         self.render_songs()
         threading.Thread(target=self._read_all_metadata, args=(list(self.tracks),), daemon=True).start()
+
+    def _indexed_songs(self):
+        """All songs Android has indexed (any folder, SD card); empty off Android or if the query fails."""
+        try:
+            return media_store_audio_paths()
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def scan_library(self):
+        before = len(self.tracks)
+        self.load_tracks()
+        found = len(self.tracks)
+        new = found - before
+        self.toast(f'Found {songs_label(found)}' + (f' · {new} new' if new > 0 else ''))
+
+    def browse_system_photos(self, folder, on_picked):
+        """Android's own picker: Google Photos, Drive, Gallery, Files…"""
+        if platform != 'android':
+            self.toast('Opens Photos, Drive and Gallery on the phone')
+            return
+        pick_image_from_system(folder, lambda path: Clock.schedule_once(lambda dt: on_picked(path) if path else None))
 
     def _read_all_metadata(self, tracks):
         for track in tracks:
@@ -754,7 +793,8 @@ class BeatSphereApp(App):
             self._covers_changed()
 
         ImagePicker(f'Cover for {self.titles.get(path, "this song")}', find_images(self.picture_roots()), chosen,
-                    cleared if path in self.custom_covers else None).open()
+                    cleared if path in self.custom_covers else None,
+                    lambda: self.browse_system_photos(self._picked_dir(), lambda picked: self._use_pick(picked, chosen))).open()
 
     def pick_playlist_cover(self, name):
         def chosen(image):
@@ -766,7 +806,16 @@ class BeatSphereApp(App):
             self._save_library_data()
 
         ImagePicker(f'Cover for {name}', find_images(self.picture_roots()), chosen,
-                    cleared if name in self.playlist_covers else None).open()
+                    cleared if name in self.playlist_covers else None,
+                    lambda: self.browse_system_photos(self._picked_dir(), lambda picked: self._use_pick(picked, chosen))).open()
+
+    def _picked_dir(self):
+        return os.path.join(self.user_data_dir, 'picked')
+
+    def _use_pick(self, picked, chosen):
+        """A picture from Photos/Drive/Gallery: chosen() copies it into the covers folder, so drop the temp copy."""
+        chosen(picked)
+        os.remove(picked)
 
     def _covers_changed(self):
         self._save_library_data()

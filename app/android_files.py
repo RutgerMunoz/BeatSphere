@@ -7,6 +7,7 @@ comes back through onActivityResult.
 """
 
 import os
+import time
 
 DELETE_REQUEST_CODE = 4721
 RESULT_OK = -1  # android.app.Activity.RESULT_OK
@@ -60,3 +61,65 @@ def _request_system_delete(path, on_done):
     activity.bind(on_activity_result=on_result)
     mActivity.startIntentSenderForResult(request.getIntentSender(), DELETE_REQUEST_CODE, None, 0, 0, 0)
     return True
+
+
+def media_store_audio_paths():
+    """Every song Android has indexed (any folder, SD card), skipping ringtones and notification sounds."""
+    from kivy.utils import platform
+
+    if platform != 'android':
+        return []
+    from android import mActivity
+    from jnius import autoclass
+
+    media = autoclass('android.provider.MediaStore$Audio$Media')
+    # IS NOT 0 (not != 0): freshly added songs have is_music NULL until Android finishes scanning them
+    cursor = mActivity.getContentResolver().query(media.EXTERNAL_CONTENT_URI, ['_data'], 'is_music IS NOT 0',
+                                                  None, None)
+    paths = []
+    if cursor is not None:
+        try:
+            while cursor.moveToNext():
+                path = cursor.getString(0)
+                if path:
+                    paths.append(path)
+        finally:
+            cursor.close()
+    return paths
+
+
+PICK_IMAGE_REQUEST_CODE = 4722
+
+
+def pick_image_from_system(folder, on_done):
+    """Opens Android's picker (Google Photos, Drive, Gallery, Files...); calls on_done(path or None).
+
+    The picked item is copied into `folder` so it keeps working after the original is moved or deleted.
+    on_done runs on Android's thread; callers hop back to Kivy themselves.
+    """
+    from android import activity, mActivity
+    from jnius import autoclass
+
+    intent_class = autoclass('android.content.Intent')
+    intent = intent_class(intent_class.ACTION_GET_CONTENT)
+    intent.setType('image/*')
+    intent.addCategory(intent_class.CATEGORY_OPENABLE)
+    chooser = intent_class.createChooser(intent, autoclass('java.lang.String')('Choose a picture'))
+
+    def on_result(request_code, result_code, data):
+        if request_code != PICK_IMAGE_REQUEST_CODE:
+            return
+        activity.unbind(on_activity_result=on_result)
+        if result_code != RESULT_OK or data is None or data.getData() is None:
+            on_done(None)
+            return
+        os.makedirs(folder, exist_ok=True)
+        # Kivy chooses an image decoder by file extension, so keep the picture's real type
+        mime = mActivity.getContentResolver().getType(data.getData()) or ''
+        suffix = {'image/png': '.png', 'image/webp': '.webp'}.get(mime, '.jpg')
+        target = os.path.join(folder, f'picked_{int(time.time() * 1000)}{suffix}')
+        copied = autoclass('com.beatsphere.media.UriFiles').copy(mActivity, data.getData(), target)
+        on_done(target if copied else None)
+
+    activity.bind(on_activity_result=on_result)
+    mActivity.startActivityForResult(chooser, PICK_IMAGE_REQUEST_CODE)
