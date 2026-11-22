@@ -361,7 +361,7 @@ class BeatSphereApp(App):
         about.add_widget(Image(source='assets/icon.png', size_hint_x=None, width=dp(52)))
         about_texts = BoxLayout(orientation='vertical')
         about_texts.add_widget(ThemedLabel(text='BeatSphere', bold=True, font_size='16sp'))
-        about_texts.add_widget(ThemedLabel(text='Version 1.0.1', role='muted', font_size='12sp'))
+        about_texts.add_widget(ThemedLabel(text='Version 1.0.2', role='muted', font_size='12sp'))
         about.add_widget(about_texts)
         box.add_widget(Widget(size_hint_y=None, height=dp(6)))
         box.add_widget(about)
