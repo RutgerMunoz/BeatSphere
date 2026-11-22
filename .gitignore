@@ -28,4 +28,14 @@ Thumbs.db
 .pybuilder/
 
 # Local media cache
-media/
+/media/
+!buildozer.spec
+
+# Buildozer output and signing keys (never commit keys)
+.buildozer/
+bin/
+*.keystore
+*.jks
+keys.txt
+# logo drafts kept locally; the chosen logo lives in assets/brand/
+assets/logo_options/
