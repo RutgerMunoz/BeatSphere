@@ -1,3 +1,9 @@
+"""Library screen model for BeatSphere favorites, playlists, and recent views.
+
+This data object acts as the bridge between the UI and the music data: it keeps
+favorite tracks, playlist names, and album-art metadata arranged for display.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -6,6 +12,8 @@ from pathlib import Path
 
 @dataclass
 class FavoritePlaylistScreen:
+    """Stores the visible sections, playlists, favorites, and cover metadata."""
+
     sections: list[str] = field(default_factory=lambda: ['Favorites', 'Playlists', 'Recently Played'])
     playlists: list[str] = field(default_factory=list)
     favorite_tracks: list[str] = field(default_factory=list)
@@ -16,10 +24,12 @@ class FavoritePlaylistScreen:
 
     @property
     def favorites_count(self) -> int:
+        """Returns the number of songs currently marked as favorites."""
         return len(self.favorite_tracks)
 
     @staticmethod
     def _default_cover_color(name: str) -> tuple[int, int, int, int]:
+        """Generates a consistent fallback color for a playlist when no cover image exists."""
         palette = [
             (18, 90, 156, 255),
             (28, 126, 214, 255),
@@ -32,6 +42,7 @@ class FavoritePlaylistScreen:
 
     @staticmethod
     def resolve_album_art(track_path: str | None) -> str | None:
+        """Looks for album art next to a track file or in the same folder."""
         if not track_path:
             return None
         track_file = Path(track_path)
@@ -43,13 +54,15 @@ class FavoritePlaylistScreen:
             if candidate.exists():
                 return str(candidate)
 
-        parent = track_file.parent
-        for candidate in sorted(parent.glob('cover*')):
-            if candidate.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'}:
+        # Only the standard album-folder names: a loose 'cover*' match put random pictures from Download on songs.
+        for candidate in sorted(track_file.parent.iterdir()):
+            if candidate.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} \
+                    and candidate.stem.lower() in {'cover', 'folder', 'front', 'album', 'albumart'}:
                 return str(candidate)
         return None
 
     def _refresh_playlist_cards(self) -> None:
+        """Rebuilds the card metadata used by the playlist grid."""
         cards: list[dict[str, object]] = []
         for playlist_name in self.playlists:
             metadata = self.playlist_cover_map.get(playlist_name, {})
@@ -72,6 +85,7 @@ class FavoritePlaylistScreen:
 
     def create_playlist(self, name: str, cover_color: tuple[int, int, int, int] | None = None,
                         cover_path: str | None = None) -> bool:
+        """Creates a playlist with optional cover metadata and refreshes the card list."""
         playlist_name = (name or '').strip()
         if not playlist_name:
             return False
@@ -86,6 +100,7 @@ class FavoritePlaylistScreen:
         return True
 
     def add_track_to_playlist(self, playlist_name: str, track_path: str) -> bool:
+        """Adds one song to a playlist and updates the visual cards immediately."""
         if not playlist_name or not track_path:
             return False
         if playlist_name not in self.playlists:
@@ -95,7 +110,28 @@ class FavoritePlaylistScreen:
         self._refresh_playlist_cards()
         return True
 
+    def rename_playlist(self, old_name: str, new_name: str) -> bool:
+        """Renames a playlist in place, keeping its songs, cover and position; refuses blanks and duplicates."""
+        new_name = (new_name or '').strip()
+        if old_name not in self.playlists or not new_name or new_name in self.playlists:
+            return False
+        self.playlists[self.playlists.index(old_name)] = new_name
+        self.playlist_tracks[new_name] = self.playlist_tracks.pop(old_name, [])
+        if old_name in self.playlist_cover_map:
+            self.playlist_cover_map[new_name] = self.playlist_cover_map.pop(old_name)
+        self._refresh_playlist_cards()
+        return True
+
+    def set_playlist_order(self, names: list[str]) -> bool:
+        """Applies a drag-reordered list of playlist names (must be the same playlists)."""
+        if sorted(names) != sorted(self.playlists):
+            return False
+        self.playlists = list(names)
+        self._refresh_playlist_cards()
+        return True
+
     def toggle_favorite(self, track_path: str) -> bool:
+        """Adds or removes a track from favorites and returns the resulting state."""
         if not track_path:
             return False
         if track_path in self.favorite_tracks:
@@ -105,6 +141,7 @@ class FavoritePlaylistScreen:
         return True
 
     def add_recent_track(self, track_path: str) -> None:
+        """Adds the current song to recent history while keeping the list short."""
         if not track_path:
             return
         if track_path in self.recent_tracks:
@@ -114,6 +151,7 @@ class FavoritePlaylistScreen:
             self.recent_tracks = self.recent_tracks[:10]
 
     def snapshot(self) -> dict:
+        """Returns a plain dictionary summary of the library screen for display and tests."""
         return {
             'sections': list(self.sections),
             'playlists': list(self.playlists),

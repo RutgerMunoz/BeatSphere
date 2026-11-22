@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Merged into the app manifest by Gradle (android.add_aars): p4a's template can't declare a
+     same-process service with a foreground type, which Android 14 requires for media playback. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.beatsphere.mediaservice">
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <application>
+        <service android:name="com.beatsphere.media.PlaybackService"
+                 android:exported="false"
+                 android:foregroundServiceType="mediaPlayback" />
+    </application>
+</manifest>

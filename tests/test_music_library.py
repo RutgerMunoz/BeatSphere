@@ -26,3 +26,36 @@ def test_scan_music_files_filters_to_audio_ext_and_sorts_results(tmp_path):
     assert [track.path for track in tracks] == [str(valid_a), str(valid_b)]
     assert tracks[0].title == 'track one'
     assert tracks[1].title == 'track two'
+
+
+def test_scan_keeps_original_title_capitalization(tmp_path):
+    (tmp_path / 'Bohemian_Rhapsody-Live.mp3').write_text('audio')
+    assert scan_music_files([tmp_path])[0].title == 'Bohemian Rhapsody Live'
+
+
+def test_metadata_and_cover_from_id3_tags(tmp_path):
+    from mutagen.id3 import APIC, ID3, TALB, TPE1
+
+    from app.music_library import extract_cover, read_metadata
+
+    song = tmp_path / 'song.mp3'
+    song.write_bytes(b'\x00' * 64)
+    tags = ID3()
+    tags.add(TPE1(encoding=3, text='Queen'))
+    tags.add(TALB(encoding=3, text='A Night at the Opera'))
+    tags.add(APIC(encoding=3, mime='image/png', type=3, desc='cover', data=b'\x89PNG fake'))
+    tags.save(song)
+
+    meta = read_metadata(str(song))
+    assert (meta['artist'], meta['album']) == ('Queen', 'A Night at the Opera')
+    cover = extract_cover(str(song), tmp_path / 'covers')
+    assert cover.endswith('.png') and Path(cover).read_bytes() == b'\x89PNG fake'
+
+
+def test_metadata_is_blank_for_untagged_files(tmp_path):
+    from app.music_library import extract_cover, read_metadata
+
+    song = tmp_path / 'plain.mp3'
+    song.write_bytes(b'not really audio')
+    assert read_metadata(str(song)) == {'artist': '', 'album': '', 'duration': 0.0}
+    assert extract_cover(str(song), tmp_path) is None
