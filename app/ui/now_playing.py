@@ -85,7 +85,8 @@ class NowPlayingView(FloatLayout):
             self._bg = Rectangle()
             self._tint = Color(0, 0, 0, 0)
             self._tint_rect = Rectangle()
-        col = BoxLayout(orientation='vertical', padding=[dp(22), dp(14), dp(22), dp(26)], spacing=dp(10))
+        col = BoxLayout(orientation='vertical', padding=[dp(22), dp(14), dp(22), dp(26)], spacing=dp(10),
+                        pos_hint={'x': 0, 'y': 0})  # follows the view as it slides; FloatLayout leaves unhinted children behind
 
         top = BoxLayout(size_hint_y=None, height=dp(48), spacing=dp(10))
         close = Pressable(text='▾', icon=True, font_size='24sp', size_hint_x=None, width=dp(48), radius=dp(24),
