@@ -7,6 +7,7 @@ and turns each file into a lightweight Track object with a clean display name.
 from __future__ import annotations
 
 import hashlib
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -112,7 +113,9 @@ def extract_cover(path: str, cache_dir: str | Path) -> str | None:
     out = Path(cache_dir) / (hashlib.md5(path.encode('utf-8')).hexdigest() + suffix)
     if not out.exists():
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_bytes(data)
+        partial = out.with_name(out.name + '.part')
+        partial.write_bytes(data)
+        os.replace(partial, out)  # another reader never sees a half-written picture
     return str(out)
 
 

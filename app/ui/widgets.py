@@ -108,7 +108,10 @@ def cover_texture(path, size=128):
     if path in cache:
         cache.move_to_end(path)
         return cache[path]
-    texture = cache[path] = _square_thumbnail(path, size)
+    texture = _square_thumbnail(path, size)
+    if texture is None:
+        return None  # not cached: the picture may still be on its way, try again next time
+    cache[path] = texture
     if len(cache) > capacity:
         cache.popitem(last=False)
     return texture

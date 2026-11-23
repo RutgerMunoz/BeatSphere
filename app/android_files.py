@@ -63,6 +63,47 @@ def _request_system_delete(path, on_done):
     return True
 
 
+def android_cover(path, out_file):
+    """Android's own cover for a song, saved as a JPEG; None if there is none or this isn't Android.
+
+    Android reads the art a music app can't: besides embedded pictures it uses the album-art files next to
+    the songs (AlbumArt*.jpg, cover.jpg...), which it indexes as non-media and hides from other apps.
+    Call from a worker thread (it can take a moment per song); jnius needs detach() when that thread ends.
+    """
+    from kivy.utils import platform
+
+    if platform != 'android':
+        return None
+    from android import mActivity
+    from jnius import autoclass
+
+    media = autoclass('android.provider.MediaStore$Audio$Media')
+    resolver = mActivity.getContentResolver()
+    cursor = resolver.query(media.EXTERNAL_CONTENT_URI, ['_id'], '_data=?', [path], None)
+    if cursor is None:
+        return None
+    try:
+        if not cursor.moveToFirst():
+            return None
+        media_id = cursor.getLong(0)
+    finally:
+        cursor.close()
+    uri = autoclass('android.content.ContentUris').withAppendedId(media.EXTERNAL_CONTENT_URI, media_id)
+    try:
+        bitmap = resolver.loadThumbnail(uri, autoclass('android.util.Size')(512, 512), None)
+    except Exception:  # FileNotFoundException: Android has no art for this song either
+        return None
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    partial = out_file + '.part'
+    stream = autoclass('java.io.FileOutputStream')(partial)
+    try:
+        bitmap.compress(autoclass('android.graphics.Bitmap$CompressFormat').JPEG, 90, stream)
+    finally:
+        stream.close()
+    os.replace(partial, out_file)  # rows never see a half-written picture
+    return out_file
+
+
 def media_store_audio_paths():
     """Every song Android has indexed (any folder, SD card), skipping ringtones and notification sounds."""
     from kivy.utils import platform

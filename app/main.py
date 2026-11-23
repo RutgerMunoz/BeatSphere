@@ -33,7 +33,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 from kivy.utils import platform
 
-from app.android_files import delete_audio_file, media_store_audio_paths, pick_image_from_system
+from app.android_files import android_cover, delete_audio_file, media_store_audio_paths, pick_image_from_system
 from app.audio import create_player
 from app.media_controls import create_media_controls
 from app.background_playback import AndroidBackgroundPlaybackController
@@ -84,7 +84,9 @@ class BeatSphereApp(App):
         self.meta = {}
         self.covers = {}
         self.meta_store = JsonStore(os.path.join(self.user_data_dir, 'song_info.json'))
-        self.song_info = dict(self.meta_store.get('songs')['info']) if self.meta_store.exists('songs') else {}
+        # 'songs2': entries saved before Android covers were used say "no cover" for songs that have one
+        self.song_info = dict(self.meta_store.get('songs2')['info']) if self.meta_store.exists('songs2') else {}
+        self._meta_lock = threading.Lock()  # one reader at a time: rescans used to race on the same songs
         self.wallpapers_loaded = False
         self.custom_covers = {}  # song path -> user-chosen image
         self.playlist_covers = {}  # playlist name -> user-chosen image
@@ -374,7 +376,7 @@ class BeatSphereApp(App):
         about.add_widget(Image(source='assets/icon.png', size_hint_x=None, width=dp(52)))
         about_texts = BoxLayout(orientation='vertical')
         about_texts.add_widget(ThemedLabel(text='BeatSphere', bold=True, font_size='16sp'))
-        about_texts.add_widget(ThemedLabel(text='Version 1.0.5', role='muted', font_size='12sp'))
+        about_texts.add_widget(ThemedLabel(text='Version 1.0.6', role='muted', font_size='12sp'))
         about.add_widget(about_texts)
         box.add_widget(Widget(size_hint_y=None, height=dp(6)))
         box.add_widget(about)
@@ -513,7 +515,16 @@ class BeatSphereApp(App):
         pick_image_from_system(folder, lambda path: Clock.schedule_once(lambda dt: on_picked(path) if path else None))
 
     def _read_all_metadata(self, tracks):
-        """Artist/album/length and embedded cover per song, cached between launches by file size and date."""
+        """Artist/album/length and cover per song (worker thread), cached between launches by file size and date."""
+        try:
+            with self._meta_lock:
+                self._read_metadata_of(tracks)
+        finally:
+            if platform == 'android':
+                from jnius import detach
+                detach()  # a thread that used Java (Android covers) must let go of it before it ends
+
+    def _read_metadata_of(self, tracks):
         changed = 0
         for track in tracks:
             try:
@@ -525,22 +536,24 @@ class BeatSphereApp(App):
             if cached and cached['stamp'] == stamp and (not cached['cover'] or os.path.exists(cached['cover'])):
                 self.meta[track.path] = cached['meta']
                 self.covers.setdefault(track.path, cached['cover'])
-            else:
-                self.covers.pop(track.path, None)  # new or edited file: read its art again
-                try:
-                    self.meta[track.path] = read_metadata(track.path)
-                    cover = self.cover_for(track.path)  # embedded art -> list avatars
-                except Exception:  # one unreadable song must not stop the covers of all the others
-                    Logger.exception('BeatSphere: cannot read %s', track.path)
-                    self.covers[track.path] = ''
-                    continue
-                self.song_info[track.path] = {'stamp': stamp, 'meta': self.meta[track.path], 'cover': cover}
-                changed += 1
-                if changed % 25 == 0:  # first run on a big library: show covers as they are found
-                    Clock.schedule_once(lambda dt: self.refresh_lists())
-                time.sleep(0.002)  # yield to the UI thread between files
+                continue
+            self.covers.pop(track.path, None)  # new or edited file: read its art again
+            try:
+                self.meta[track.path] = read_metadata(track.path)
+                cover = self.cover_for(track.path)
+            except Exception:  # one unreadable song must not stop the covers of all the others
+                Logger.exception('BeatSphere: cannot read %s', track.path)
+                self.covers[track.path] = ''
+                continue
+            self.song_info[track.path] = {'stamp': stamp, 'meta': self.meta[track.path], 'cover': cover}
+            changed += 1
+            if changed in (5, 15) or changed % 25 == 0:  # big first run: covers show up while the rest load
+                Clock.schedule_once(lambda dt: self.refresh_lists())
+            if changed % 100 == 0:  # closing the app mid-way keeps what was read so far
+                Clock.schedule_once(lambda dt: self.meta_store.put('songs2', info=dict(self.song_info)))
+            time.sleep(0.002)  # yield to the UI thread between files
         if changed:
-            Clock.schedule_once(lambda dt: self.meta_store.put('songs', info=self.song_info))
+            Clock.schedule_once(lambda dt: self.meta_store.put('songs2', info=dict(self.song_info)))
         Clock.schedule_once(lambda dt: self.refresh_lists())
 
     def refresh_lists(self):
@@ -1183,8 +1196,10 @@ class BeatSphereApp(App):
         if custom and os.path.exists(custom):
             return custom
         if path not in self.covers:
-            self.covers[path] = (extract_cover(path, os.path.join(self.user_data_dir, 'covers'))
-                                 or FavoritePlaylistScreen.resolve_album_art(path) or '')
+            covers_dir = os.path.join(self.user_data_dir, 'covers')
+            self.covers[path] = (extract_cover(path, covers_dir) or FavoritePlaylistScreen.resolve_album_art(path)
+                                 or android_cover(path, os.path.join(covers_dir, 'a_' + hashlib.md5(
+                                     path.encode('utf-8')).hexdigest() + '.jpg')) or '')
         return self.covers[path]
 
     def length(self):
