@@ -36,7 +36,7 @@ This project is initialized with Git and is ready for versioned development.
 
 BeatSphere is free. If you enjoy it and want to support its development, you can donate here:
 
-- Ko-fi: https://ko-fi.com/rutgerdevloper
+- Ko-fi: https://ko-fi.com/rutgerdeveloper
 - PayPal: https://paypal.me/RutgerMunoz
 - Liberapay: https://liberapay.com/rutger_munoz
 
