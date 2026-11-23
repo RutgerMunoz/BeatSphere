@@ -40,4 +40,6 @@ ICON_FONT = 'data/fonts/DejaVuSans.ttf'  # has ♫ ☰ ⚙ ⇄ ↻ ◀ ▶ ❚ �
 
 
 def songs_label(count):
-    return f'{count} song' if count == 1 else f'{count} songs'
+    from app.i18n import tr
+
+    return tr('1 song') if count == 1 else tr('{count} songs').format(count=count)

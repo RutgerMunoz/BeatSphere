@@ -33,18 +33,21 @@ def test_scan_keeps_original_title_capitalization(tmp_path):
     assert scan_music_files([tmp_path])[0].title == 'Bohemian Rhapsody Live'
 
 
-def test_metadata_and_cover_from_id3_tags(tmp_path):
-    from mutagen.id3 import APIC, ID3, TALB, TPE1
+def _id3_frame(frame_id, body):
+    import struct
 
+    return frame_id.encode() + struct.pack('>I', len(body)) + b'\x00\x00' + body
+
+
+def test_metadata_and_cover_from_id3_tags(tmp_path):
     from app.music_library import extract_cover, read_metadata
 
+    frames = (_id3_frame('TPE1', b'\x03Queen') + _id3_frame('TALB', b'\x03A Night at the Opera')
+              + _id3_frame('APIC', b'\x00image/png\x00\x03\x00' + b'\x89PNG fake'))
+    size = len(frames)
+    synchsafe = bytes([(size >> 21) & 127, (size >> 14) & 127, (size >> 7) & 127, size & 127])
     song = tmp_path / 'song.mp3'
-    song.write_bytes(b'\x00' * 64)
-    tags = ID3()
-    tags.add(TPE1(encoding=3, text='Queen'))
-    tags.add(TALB(encoding=3, text='A Night at the Opera'))
-    tags.add(APIC(encoding=3, mime='image/png', type=3, desc='cover', data=b'\x89PNG fake'))
-    tags.save(song)
+    song.write_bytes(b'ID3\x03\x00\x00' + synchsafe + frames + b'\x00' * 64)
 
     meta = read_metadata(str(song))
     assert (meta['artist'], meta['album']) == ('Queen', 'A Night at the Opera')

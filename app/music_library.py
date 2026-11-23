@@ -67,46 +67,29 @@ def scan_music_files(search_roots: Iterable[str | Path]) -> list[Track]:
     return sorted(discovered.values(), key=lambda item: item.title.lower())
 
 
+def _read_tags(path: str, image: bool = False):
+    """tinytag's view of a file (MIT licensed, unlike GPL mutagen); None when it can't be read."""
+    try:
+        from tinytag import TinyTag
+
+        return TinyTag.get(path, image=image)
+    except Exception:
+        return None
+
+
 def read_metadata(path: str) -> dict:
     """Returns artist, album and duration (seconds) from the file's tags; blanks when missing or unreadable."""
-    meta = {'artist': '', 'album': '', 'duration': 0.0}
-    try:
-        from mutagen import File as MutagenFile
-
-        audio = MutagenFile(path, easy=True)
-    except Exception:
-        audio = None
-    if audio is not None:
-        tags = audio.tags or {}
-        meta['artist'] = (tags.get('artist') or [''])[0]
-        meta['album'] = (tags.get('album') or [''])[0]
-        meta['duration'] = float(getattr(audio.info, 'length', 0) or 0)
-        return meta
-    id3 = _read_id3(path)  # tagged file whose audio frames mutagen can't parse
-    if id3 is not None:
-        meta['artist'] = str(id3.get('TPE1', ''))
-        meta['album'] = str(id3.get('TALB', ''))
-    return meta
+    tags = _read_tags(path)
+    if tags is None:
+        return {'artist': '', 'album': '', 'duration': 0.0}
+    return {'artist': tags.artist or '', 'album': tags.album or '', 'duration': float(tags.duration or 0)}
 
 
 def extract_cover(path: str, cache_dir: str | Path) -> str | None:
-    """Saves the embedded album art (MP3 APIC, MP4 covr, FLAC/OGG pictures) to cache_dir and returns its path."""
-    data = None
-    try:
-        from mutagen import File as MutagenFile
-
-        audio = MutagenFile(path)
-    except Exception:
-        audio = None
-    tags = audio.tags if audio is not None else _read_id3(path)
-    if tags is not None:
-        apic = [key for key in tags.keys() if key.startswith('APIC')]
-        if apic:
-            data = tags[apic[0]].data
-        elif 'covr' in tags:
-            data = bytes(tags['covr'][0])
-    if data is None and getattr(audio, 'pictures', None):
-        data = audio.pictures[0].data
+    """Saves the embedded album art (MP3, M4A, FLAC, OGG, Opus pictures) to cache_dir and returns its path."""
+    tags = _read_tags(path, image=True)
+    picture = tags.images.any if tags is not None else None
+    data = picture.data if picture is not None else None
     if not data:
         return None
     suffix = '.png' if data[:4] == b'\x89PNG' else '.jpg'
@@ -117,12 +100,3 @@ def extract_cover(path: str, cache_dir: str | Path) -> str | None:
         partial.write_bytes(data)
         os.replace(partial, out)  # another reader never sees a half-written picture
     return str(out)
-
-
-def _read_id3(path: str):
-    try:
-        from mutagen.id3 import ID3
-
-        return ID3(path)
-    except Exception:
-        return None

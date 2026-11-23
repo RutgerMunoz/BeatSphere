@@ -30,6 +30,7 @@ from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 
+from app.i18n import tr
 from app.library_views import letter_of, move_item
 from app.ui.theme import ICON_FONT
 
@@ -127,6 +128,7 @@ class ThemedLabel(Label):
     """Label that follows the app's text color (or another palette role) and font."""
 
     role = StringProperty('text')
+    translate = BooleanProperty(True)
     keep_font = BooleanProperty(False)
     wrap = BooleanProperty(False)
 
@@ -137,6 +139,15 @@ class ThemedLabel(Label):
         app().bind(palette=self._sync, font=self._sync)
         self.bind(role=self._sync, size=self._fit)
         self._sync()
+        self.bind(text=self.on_text)  # text set later (counts, messages) gets translated too
+        self.on_text()
+
+    def on_text(self, *_):
+        """Interface text (English) shows in the app's language; song names and the like opt out."""
+        if self.translate:
+            translated = tr(self.text)
+            if translated != self.text:
+                self.text = translated
 
     def _fit(self, *_):
         self.text_size = (self.width, None if self.wrap else self.height)
@@ -152,6 +163,7 @@ class ThemedInput(TextInput):
 
     def __init__(self, **kwargs):
         kwargs.setdefault('multiline', False)
+        kwargs['hint_text'] = tr(kwargs.get('hint_text', ''))
         super().__init__(**kwargs)
         self.background_normal = self.background_active = ''
         self.padding = [dp(16), dp(12)]
@@ -191,6 +203,7 @@ class Pressable(ButtonBehavior, Label):
     gradient = BooleanProperty(False)
     font_file = StringProperty('')  # fixed font (font previews in Settings) instead of the app font
     scale = NumericProperty(1)
+    translate = BooleanProperty(True)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -207,6 +220,15 @@ class Pressable(ButtonBehavior, Label):
                   selected=self._sync, bg_role=self._sync, fg_role=self._sync, gradient=self._sync)
         app().bind(palette=self._sync, font=self._sync)
         self._sync()
+        self.bind(text=self.on_text)  # text set later (counts, messages) gets translated too
+        self.on_text()
+
+    def on_text(self, *_):
+        """Interface text (English) shows in the app's language; song names and the like opt out."""
+        if self.translate:
+            translated = tr(self.text)
+            if translated != self.text:
+                self.text = translated
 
     def _redraw(self, *_):
         self._bg.pos, self._bg.size, self._bg.radius = self.pos, self.size, [self.radius]
@@ -374,8 +396,9 @@ class SongRow(RecycleDataViewBehavior, ButtonBehavior, BoxLayout):
             self._edge = SmoothLine(width=1)
         self.avatar = Avatar(size_hint=(None, None), size=(dp(44), dp(44)), pos_hint={'center_y': 0.5})
         texts = BoxLayout(orientation='vertical', padding=[0, dp(4)])
-        self.title_label = ThemedLabel(font_size='15sp', bold=True, shorten=True, shorten_from='right')
-        self.subtitle_label = ThemedLabel(role='muted', font_size='12sp', shorten=True, shorten_from='right')
+        self.title_label = ThemedLabel(font_size='15sp', bold=True, shorten=True, shorten_from='right', translate=False)
+        self.subtitle_label = ThemedLabel(role='muted', font_size='12sp', shorten=True, shorten_from='right',
+                                          translate=False)
         texts.add_widget(self.title_label)
         texts.add_widget(self.subtitle_label)
         self.handle = ThemedLabel(text='≡', font_name=ICON_FONT, keep_font=True, font_size='22sp', role='muted',
@@ -675,7 +698,7 @@ class ThemeSwatch(ButtonBehavior, BoxLayout):
             self._dot2 = Ellipse()
             self._ring_color = Color(0, 0, 0, 0)
             self._ring = Line(width=dp(2))
-        self.add_widget(Label(text=name, bold=True, color=palette['text'], halign='left', valign='bottom',
+        self.add_widget(Label(text=tr(name), bold=True, color=palette['text'], halign='left', valign='bottom',
                               text_size=(None, None)))
         self.bind(pos=self._redraw, size=self._redraw, selected=self._redraw)
 
@@ -792,10 +815,10 @@ class PlaylistTile(ButtonBehavior, BoxLayout):
             self.add_widget(top)
         self.add_widget(Label(text='' if texture else glyph, font_name=ICON_FONT, font_size='34sp',
                               color=(1, 1, 1, 0.95)))
-        name_label = Label(text=name, bold=True, color=(1, 1, 1, 1), size_hint_y=None, height=dp(22),
+        name_label = Label(text=tr(name), bold=True, color=(1, 1, 1, 1), size_hint_y=None, height=dp(22),
                            halign='left', valign='middle', shorten=True)
         name_label.bind(size=lambda w, *_: setattr(w, 'text_size', w.size))
-        count = Label(text=count_text, color=(1, 1, 1, 0.75), font_size='12sp', size_hint_y=None, height=dp(18),
+        count = Label(text=tr(count_text), color=(1, 1, 1, 0.75), font_size='12sp', size_hint_y=None, height=dp(18),
                       halign='left', valign='middle')
         count.bind(size=lambda w, *_: setattr(w, 'text_size', w.size))
         self.add_widget(name_label)

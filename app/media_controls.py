@@ -10,6 +10,8 @@ Commands arrive on Android's main thread, not Kivy's; the app decides how to run
 
 import os
 
+from app.i18n import tr
+
 ACTIONS = {'com.beatsphere.PREVIOUS': 'previous', 'com.beatsphere.TOGGLE': 'toggle', 'com.beatsphere.NEXT': 'next'}
 CHANNEL_ID = 'beatsphere_playback'
 NOTIFICATION_ID = 7301
@@ -56,7 +58,7 @@ class AndroidMediaControls:
         channel = autoclass('android.app.NotificationChannel')(CHANNEL_ID, 'Now playing',
                                                                 manager_class.IMPORTANCE_LOW)
         channel.setShowBadge(False)
-        channel.setDescription('Controls for the song that is playing')
+        channel.setDescription(tr('Controls for the song that is playing'))
         self.manager.createNotificationChannel(channel)
 
         class SessionListener(PythonJavaClass):
@@ -162,10 +164,10 @@ class AndroidMediaControls:
         builder.setVisibility(notification.VISIBILITY_PUBLIC)  # show controls on the lock screen
         builder.setShowWhen(False)
         builder.setOngoing(playing)  # can't be swiped away while music plays
-        builder.addAction(action(drawable.ic_media_previous, 'Previous', 'previous'))
+        builder.addAction(action(drawable.ic_media_previous, tr('Previous'), 'previous'))
         builder.addAction(action(drawable.ic_media_pause if playing else drawable.ic_media_play,
-                                 'Pause' if playing else 'Play', 'toggle'))
-        builder.addAction(action(drawable.ic_media_next, 'Next', 'next'))
+                                 tr('Pause') if playing else tr('Play'), 'toggle'))
+        builder.addAction(action(drawable.ic_media_next, tr('Next'), 'next'))
         builder.setStyle(style)
         built = builder.build()
         self.manager.notify(NOTIFICATION_ID, built)

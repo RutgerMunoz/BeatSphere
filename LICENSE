@@ -1,0 +1,242 @@
+BeatSphere License
+Version 1.1, November 2026
+
+Copyright (c) 2026 Rutger Alexander Munoz (https://github.com/RutgerMunoz)
+All rights reserved.
+
+Please read this license before you use, view or download BeatSphere. By
+installing, using, viewing, downloading or otherwise accessing BeatSphere,
+you agree to these terms. If you do not agree, do not use BeatSphere.
+
+
+1. DEFINITIONS
+
+   "Author" means Rutger Alexander Munoz, the creator and owner of
+   BeatSphere.
+
+   "BeatSphere" means everything in this repository and everything released
+   under the BeatSphere name, including the source code, compiled apps and
+   installation files (such as APK files), the user interface and its
+   design, the name "BeatSphere", the logo, icons, animations, artwork,
+   documentation and any later versions of any of these.
+
+   "You" means any person or organization that accesses or uses BeatSphere.
+
+   "Personal Use" means using BeatSphere on devices you own or control, for
+   your own private enjoyment, without receiving money or any other benefit
+   from that use.
+
+   "Commercial Use" means any use meant to earn money or another business
+   advantage, directly or indirectly. This includes selling BeatSphere,
+   charging for access to it, showing ads in or around it, bundling it with
+   a paid product or service, or using it inside a business.
+
+   "Derivative Work" means anything based on BeatSphere or on any part of
+   it, such as a modified version, a translation, a "fork", a port to
+   another platform, or code, designs or artwork copied from it into
+   another project.
+
+   "Written Consent" means permission from the Author that is written down
+   and clearly given, for example a reply from the Author's GitHub account
+   on an issue, a signed letter, or a message from the Author that names
+   what is allowed. Silence, or a lack of reply, is never consent.
+
+
+2. OWNERSHIP
+
+   2.1 BeatSphere is owned by the Author and is protected by copyright and
+       other intellectual property laws.
+
+   2.2 BeatSphere is licensed to You under these terms, not sold. Apart from
+       the limited permissions in section 3, no rights are given to You,
+       whether by implication, by conduct or otherwise. All rights not
+       expressly granted are reserved by the Author.
+
+   2.3 BeatSphere's source code is published so that people can see how it
+       is made. Being able to see the code does not make it free to use,
+       copy or change. BeatSphere is not "open source" software.
+
+
+3. WHAT YOU MAY DO WITHOUT ASKING
+
+   As long as You follow this license, the Author gives You a personal,
+   worldwide, free of charge, non-exclusive, non-transferable and revocable
+   permission to:
+
+   3.1 View and read the source code, files and documentation of
+       BeatSphere on GitHub.
+
+   3.2 Download, install and use the official BeatSphere app, as released
+       by the Author, on devices You own or control, for Personal Use only.
+
+   3.3 Make backup copies of the official installation file (APK) for Your
+       own Personal Use, as long as You do not share them with others.
+
+   3.4 Talk about BeatSphere, review it, write about it, and share a link to
+       its official GitHub page.
+
+   3.5 Fork the repository on GitHub only for the purpose of proposing a
+       change back to BeatSphere through a pull request, as described in
+       section 6. Such a fork may not be used, published or distributed for
+       any other purpose.
+
+
+4. WHAT NEEDS THE AUTHOR'S WRITTEN CONSENT
+
+   Everything not allowed in section 3 needs the Author's Written Consent
+   first. This includes, but is not limited to:
+
+   4.1 Copying all or any part of the source code, design or artwork into
+       another project.
+
+   4.2 Modifying, translating, adapting or creating any Derivative Work.
+
+   4.3 Publishing, sharing, uploading, selling, renting, lending, licensing
+       or distributing BeatSphere, a modified version, or any part of it,
+       in any form and by any means. This includes app stores (such as
+       Google Play), websites, file-sharing services and messaging apps.
+
+   4.4 Any Commercial Use.
+
+   4.5 Using the name "BeatSphere", its logo, icons or artwork, or anything
+       confusingly similar, in any product, service, domain name, account
+       name or promotion.
+
+   4.6 Removing, hiding or changing any copyright notice, author credit or
+       this license.
+
+   4.7 Reverse engineering, decompiling or disassembling the compiled app,
+       except where the law of Your country allows it regardless of this
+       license.
+
+   4.8 Using BeatSphere, its code or its content to train, fine-tune or
+       evaluate artificial intelligence or machine learning models.
+
+   4.9 Presenting BeatSphere, or any part of it, as Your own work.
+
+
+5. HOW TO ASK FOR CONSENT
+
+   5.1 Open an issue at https://github.com/RutgerMunoz/BeatSphere/issues,
+       or contact the Author through https://github.com/RutgerMunoz.
+
+   5.2 Explain who You are, what You want to do, and how You plan to use
+       BeatSphere.
+
+   5.3 The Author may say yes, say no, or set conditions, at the Author's
+       sole discretion. Consent applies only to what it names, only to the
+       person it is given to, and only for as long as it says. It cannot be
+       passed on to anyone else.
+
+
+6. SUGGESTIONS, FEEDBACK AND CONTRIBUTIONS
+
+   6.1 Suggestions, ideas and bug reports are welcome. Please share them at
+       https://github.com/RutgerMunoz/BeatSphere/issues.
+
+   6.2 If You send a suggestion, idea, code, design or any other
+       contribution (for example as an issue or a pull request), You:
+       a. confirm that it is Your own work, or that You have the right to
+          share it;
+       b. give the Author a perpetual, worldwide, free of charge,
+          irrevocable right to use, change, include and publish it as part
+          of BeatSphere or otherwise, without paying You and without having
+          to credit You; and
+       c. agree that sending it does not give You any rights in BeatSphere.
+
+   6.3 The Author is not obliged to use any suggestion or contribution.
+
+
+7. MUSIC, FILES AND PRIVACY
+
+   7.1 BeatSphere plays music and shows pictures that are already on Your
+       device. You are responsible for having the right to play, store and
+       use that music and those pictures. The Author does not provide any
+       music and is not responsible for the files You use with BeatSphere.
+
+   7.2 BeatSphere works on Your device. It does not send Your music, Your
+       files or Your listening history to the Author.
+
+
+8. DONATIONS
+
+   8.1 BeatSphere is free. You may choose to support the Author with a
+       donation through the platforms named on the official GitHub page.
+
+   8.2 Donations are voluntary gifts. They do not buy any license, product,
+       service, support, feature or right, and they do not change these
+       terms. Unless the law requires otherwise, donations are not
+       refundable.
+
+
+9. THIRD-PARTY COMPONENTS
+
+   9.1 BeatSphere includes software and fonts made by other people, such as
+       Python, Kivy, tinytag, python-for-android and the Audiowide font.
+
+   9.2 Each of those components remains under its own license. Nothing in
+       this license limits or changes the rights those licenses give You
+       for those components. The Audiowide font license is included in
+       assets/fonts/OFL.txt.
+
+
+10. ENDING THIS LICENSE
+
+    10.1 This license, and any consent given under it, ends automatically
+         if You break any of its terms.
+
+    10.2 The Author may also end Your permission at any time, for any
+         reason, by telling You.
+
+    10.3 When the license ends, You must stop using BeatSphere and delete
+         every copy You have, including copies on Your devices and in
+         backups.
+
+    10.4 Sections 2, 4, 6, 9, 11, 12 and 13 continue to apply after the
+         license ends.
+
+
+11. NO WARRANTY
+
+    BEATSPHERE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF
+    ANY KIND, EXPRESS OR IMPLIED, INCLUDING THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND
+    THAT IT WILL BE FREE OF ERRORS OR WILL WORK WITHOUT INTERRUPTION. YOU
+    USE BEATSPHERE AT YOUR OWN RISK.
+
+
+12. LIMITATION OF LIABILITY
+
+    TO THE FULLEST EXTENT ALLOWED BY LAW, THE AUTHOR WILL NOT BE LIABLE FOR
+    ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL OR CONSEQUENTIAL, INCLUDING LOSS OF DATA, LOSS OF
+    FILES, DAMAGE TO DEVICES, OR LOSS OF PROFITS, ARISING FROM OR CONNECTED
+    WITH BEATSPHERE OR ITS USE, EVEN IF THE AUTHOR WAS TOLD THAT SUCH DAMAGE
+    WAS POSSIBLE.
+
+
+13. GENERAL
+
+    13.1 The Author may publish a new version of this license. Each release
+         of BeatSphere is covered by the license version that comes with it,
+         or by a later version if You choose to accept it.
+
+    13.2 If any part of this license is found to be unenforceable, that part
+         will be applied as far as the law allows, and the rest of the
+         license stays in full effect.
+
+    13.3 If the Author does not enforce a term at some point, that is not a
+         waiver of the right to enforce it later.
+
+    13.4 This license is the complete agreement between You and the Author
+         about BeatSphere, unless the Author gives You Written Consent that
+         says otherwise.
+
+
+14. CONTACT
+
+    Author:      Rutger Alexander Munoz
+    GitHub:      https://github.com/RutgerMunoz
+    Project:     https://github.com/RutgerMunoz/BeatSphere
+    Suggestions, bug reports and permission requests:
+                 https://github.com/RutgerMunoz/BeatSphere/issues

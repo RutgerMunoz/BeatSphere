@@ -23,10 +23,10 @@ source.exclude_patterns = tests/**, build/**, dist/**
 source.exclude_dirs = tests, bin, .venv, brotli, googletest, highway, lcms, lodepng, sjpeg, skcms
 
 # (str) Application versioning
-version = 1.0.6
+version = 1.0.7
 
 # (str) Application requirements
-requirements = python3,kivy,mutagen
+requirements = python3,kivy,tinytag
 
 # (str) Presplash of the application
 presplash.filename = %(source.dir)s/assets/logo.png

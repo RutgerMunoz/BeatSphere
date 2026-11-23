@@ -25,8 +25,8 @@ class MiniPlayer(Card):
         # bar was still animating open.
         self.art = AlbumArt(size_hint=(None, None), size=(dp(50), dp(50)), pos_hint={'center_y': 0.5})
         texts = BoxLayout(orientation='vertical', padding=[0, dp(2)])
-        self.title = ThemedLabel(text='', bold=True, font_size='15sp', shorten=True)
-        self.subtitle = ThemedLabel(text='', role='muted', font_size='12sp', shorten=True)
+        self.title = ThemedLabel(text='', bold=True, font_size='15sp', shorten=True, translate=False)
+        self.subtitle = ThemedLabel(text='', role='muted', font_size='12sp', shorten=True, translate=False)
         texts.add_widget(self.title)
         texts.add_widget(self.subtitle)
         self.eq = EqualizerBars(size_hint=(None, None), size=(dp(20), dp(16)), pos_hint={'center_y': 0.5})
@@ -107,9 +107,9 @@ class NowPlayingView(FloatLayout):
         col.add_widget(self.art)
 
         self.title = ThemedLabel(text='', bold=True, font_size='24sp', size_hint_y=None, height=dp(36),
-                                 halign='center', shorten=True)
+                                 halign='center', shorten=True, translate=False)
         self.artist = ThemedLabel(text='', role='muted', font_size='15sp', size_hint_y=None, height=dp(24),
-                                  halign='center', shorten=True)
+                                  halign='center', shorten=True, translate=False)
         col.add_widget(self.title)
         col.add_widget(self.artist)
 

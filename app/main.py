@@ -38,6 +38,7 @@ from app.audio import create_player
 from app.media_controls import create_media_controls
 from app.background_playback import AndroidBackgroundPlaybackController
 from app.favorite_playlist_ui import FavoritePlaylistScreen
+from app.i18n import LANGUAGES, set_language, tr
 from app.library_views import (LETTERS, apply_custom_order, filter_tracks, fmt_time, group_by_folder, make_mix,
                                sort_tracks)
 from app.music_library import extract_cover, read_metadata, scan_music_files, tracks_from_index
@@ -58,7 +59,7 @@ TABS = [('Songs', '♫'), ('Playlists', '☰'), ('Folders', '▤'), ('Mix', '⇄
 
 def icon_text(glyph, text):
     """Markup mixing an icon-font glyph with normal text in one label."""
-    return f'[font={ICON_FONT}]{glyph}[/font]  {text}'
+    return f'[font={ICON_FONT}]{glyph}[/font]  {tr(text)}'
 
 
 class BeatSphereApp(App):
@@ -106,6 +107,8 @@ class BeatSphereApp(App):
         self.wallpaper = settings.get('wallpaper', '')
         self.motion = settings.get('motion', True)
         self.sort_mode = settings.get('sort', 'az')
+        self.language = settings.get('language', '')  # '' = follow the phone's language
+        set_language(self.language)  # before any text is created
         self._load_library_data()
         Window.softinput_mode = 'below_target'  # keep text fields visible above the keyboard
 
@@ -224,7 +227,7 @@ class BeatSphereApp(App):
         for letter in LETTERS:
             chip = Pressable(text=letter, size_hint_x=None, width=dp(54) if letter == 'All' else dp(40),
                              radius=dp(20), selected=letter == 'All', bold=True)
-            chip.bind(on_release=lambda c: self.choose_letter(c.text))
+            chip.bind(on_release=lambda _, letter=letter: self.choose_letter(letter))  # chip text is translated
             self.letter_chips[letter] = chip
             letters.add_widget(chip)
         letters_scroll.add_widget(letters)
@@ -366,6 +369,12 @@ class BeatSphereApp(App):
         box.add_widget(self.hidden_btn)
         self._sync_hidden_btn()
 
+        box.add_widget(self._section('Language'))
+        self.language_btn = Pressable(text='', size_hint_y=None, height=dp(46), radius=dp(18), translate=False)
+        self.language_btn.bind(on_release=lambda *_: self.choose_language())
+        box.add_widget(self.language_btn)
+        self._sync_language_btn()
+
         box.add_widget(self._section('Motion'))
         self.motion_btn = Pressable(text='', size_hint_y=None, height=dp(46), radius=dp(18))
         self.motion_btn.bind(on_release=lambda *_: self.set_setting('motion', not self.motion))
@@ -376,7 +385,7 @@ class BeatSphereApp(App):
         about.add_widget(Image(source='assets/icon.png', size_hint_x=None, width=dp(52)))
         about_texts = BoxLayout(orientation='vertical')
         about_texts.add_widget(ThemedLabel(text='BeatSphere', bold=True, font_size='16sp'))
-        about_texts.add_widget(ThemedLabel(text='Version 1.0.6', role='muted', font_size='12sp'))
+        about_texts.add_widget(ThemedLabel(text='Version 1.0.7', role='muted', font_size='12sp'))
         about.add_widget(about_texts)
         box.add_widget(Widget(size_hint_y=None, height=dp(6)))
         box.add_widget(about)
@@ -505,7 +514,8 @@ class BeatSphereApp(App):
         self.load_tracks()
         found = len(self.tracks)
         new = found - before
-        self.toast(f'Found {songs_label(found)}' + (f' · {new} new' if new > 0 else ''))
+        self.toast(tr('Found {songs}').format(songs=songs_label(found))
+                   + (tr(' · {count} new').format(count=new) if new > 0 else ''))
 
     def browse_system_photos(self, folder, on_picked):
         """Android's own picker: Google Photos, Drive, Gallery, Files…"""
@@ -573,7 +583,7 @@ class BeatSphereApp(App):
         elif len(shown) == total:
             self.song_count.text = songs_label(total)
         else:
-            self.song_count.text = f'{len(shown)} of {total}'
+            self.song_count.text = tr('{shown} of {total}').format(shown=len(shown), total=total)
 
     def choose_letter(self, letter):
         self.letter = letter
@@ -629,7 +639,8 @@ class BeatSphereApp(App):
         self.back_action = self.render_playlists
         page.clear_widgets()
         top = BoxLayout(size_hint_y=None, height=dp(46), spacing=dp(8))
-        top.add_widget(ThemedLabel(text=f'Drag [font={ICON_FONT}]≡[/font] to reorder', markup=True, bold=True, font_size='18sp'))
+        top.add_widget(ThemedLabel(text=tr('Drag {icon} to reorder').format(icon=f'[font={ICON_FONT}]≡[/font]'),
+                                   markup=True, bold=True, font_size='18sp'))
         done = Pressable(text=icon_text('✓', 'Done'), markup=True, size_hint_x=None, width=dp(100), radius=dp(20),
                          gradient=True, bold=True)
         done.bind(on_release=lambda *_: self.render_playlists())
@@ -690,11 +701,11 @@ class BeatSphereApp(App):
                 for path in paths:
                     self.library_screen.add_track_to_playlist(name, path)
             self._save_library_data()
-            self.toast(f'Added {songs_label(len(paths))} to “{name}”')
+            self.toast(tr('Added {songs} to “{name}”').format(songs=songs_label(len(paths)), name=tr(name)))
             (self.open_favorites if name == 'Favorites' else lambda: self.open_playlist(name))()
 
         subtitles = {t.path: self.meta.get(t.path, {}).get('artist') or self.folder_name(t.path) for t in self.tracks}
-        SongPicker(f'Add songs to “{name}”', [t for t in self.tracks if t.path not in present], subtitles,
+        SongPicker(tr('Add songs to “{name}”').format(name=tr(name)), [t for t in self.tracks if t.path not in present], subtitles,
                    added).open()
 
     def playlist_info(self, name):
@@ -727,9 +738,9 @@ class BeatSphereApp(App):
             self._forget_image(self.playlist_covers.pop(name, None))
             self._save_library_data()
             self.render_playlists()
-            self.toast(f'Deleted playlist “{name}”')
+            self.toast(tr('Deleted playlist “{name}”').format(name=name))
 
-        ConfirmDialog(f'Delete “{name}”?', 'The playlist is removed. Your songs stay on your phone and in '
+        ConfirmDialog(tr('Delete “{name}”?').format(name=name), 'The playlist is removed. Your songs stay on your phone and in '
                       'BeatSphere.', 'Delete', delete).open()
 
     def create_playlist(self, *_):
@@ -766,7 +777,7 @@ class BeatSphereApp(App):
         if not mixed:
             self.mix_label.text = 'No songs for this mix yet'
             return
-        self.mix_label.text = f'Up next · {songs_label(len(mixed))}'
+        self.mix_label.text = tr('Up next · {songs}').format(songs=songs_label(len(mixed)))
         self.mix_list.set_tracks(self._tracks_for(mixed))
         self.play_path(mixed[0], mixed)
 
@@ -792,8 +803,26 @@ class BeatSphereApp(App):
 
     def _sync_hidden_btn(self):
         count = len(self.hidden)
-        self.hidden_btn.text = f'Show {songs_label(count)} again' if count else 'No hidden songs'
+        self.hidden_btn.text = tr('Show {songs} again').format(songs=songs_label(count)) if count else 'No hidden songs'
         self.hidden_btn.disabled = not count
+
+    def _sync_language_btn(self):
+        name = LANGUAGES.get(self.language) or tr('Phone language')
+        self.language_btn.text = f'{name}  ›'
+
+    def choose_language(self):
+        def pick(code):
+            if code == self.language:
+                return
+            self.language = code
+            self._save_settings()
+            self._sync_language_btn()
+            ConfirmDialog(tr('Change language'), tr('Close BeatSphere and open it again to see the new language.'),
+                          tr('Close now'), self.stop).open()
+
+        options = [(tr('Phone language'), lambda: pick(''))]
+        options += [(name, lambda code=code: pick(code)) for code, name in LANGUAGES.items()]
+        OptionsSheet(tr('Language'), options).open()
 
     def _sync_motion_btn(self):
         self.motion_btn.text = 'Animations: On' if self.motion else 'Animations: Off'
@@ -849,7 +878,7 @@ class BeatSphereApp(App):
 
     def _save_settings(self):
         self.store.put('settings', theme=self.theme_name, font=self.font, wallpaper=self.wallpaper, motion=self.motion,
-                       sort=self.sort_mode)
+                       sort=self.sort_mode, language=self.language)
 
     # ---------- covers ----------
 
@@ -892,7 +921,7 @@ class BeatSphereApp(App):
             self._forget_image(self.custom_covers.pop(path, None))
             self._covers_changed()
 
-        ImagePicker(f'Cover for {self.titles.get(path, "this song")}', find_images(self.picture_roots()), chosen,
+        ImagePicker(tr('Cover for {name}').format(name=self.titles.get(path) or tr('this song')), find_images(self.picture_roots()), chosen,
                     cleared if path in self.custom_covers else None,
                     lambda: self.browse_system_photos(self._picked_dir(), lambda picked: self._use_pick(picked, chosen))).open()
 
@@ -905,7 +934,7 @@ class BeatSphereApp(App):
             self._forget_image(self.playlist_covers.pop(name, None))
             self._save_library_data()
 
-        ImagePicker(f'Cover for {name}', find_images(self.picture_roots()), chosen,
+        ImagePicker(tr('Cover for {name}').format(name=tr(name)), find_images(self.picture_roots()), chosen,
                     cleared if name in self.playlist_covers else None,
                     lambda: self.browse_system_photos(self._picked_dir(), lambda picked: self._use_pick(picked, chosen))).open()
 
@@ -937,7 +966,7 @@ class BeatSphereApp(App):
         if playlist == 'Favorites':
             options.pop(2)  # already covered by "Remove from this playlist"
         if playlist:
-            options.append((icon_text('−', f'Remove from “{playlist}”'), lambda: self.remove_from_playlist(path, playlist)))
+            options.append((icon_text('−', tr('Remove from “{name}”').format(name=tr(playlist))), lambda: self.remove_from_playlist(path, playlist)))
         options += [
             (icon_text('⊘', 'Remove from BeatSphere'), lambda: self.hide_song(path)),
             (icon_text('✖', 'Delete from phone…'), lambda: self.delete_song(path)),
@@ -987,7 +1016,7 @@ class BeatSphereApp(App):
         def add(name):
             self.library_screen.add_track_to_playlist(name, path)
             self._save_library_data()
-            self.toast(f'Added to “{name}”')
+            self.toast(tr('Added to “{name}”').format(name=tr(name)))
 
         def new_playlist():
             def created(name):
@@ -1026,7 +1055,7 @@ class BeatSphereApp(App):
         def deleted(ok):
             if ok:
                 self._drop_song(path)
-                self.toast(f'Deleted “{title}”')
+                self.toast(tr('Deleted “{title}”').format(title=title))
             else:
                 self.toast('The file could not be deleted')
 
@@ -1037,7 +1066,7 @@ class BeatSphereApp(App):
                 self.state.playing = False
             delete_audio_file(path, lambda ok: Clock.schedule_once(lambda dt: deleted(ok)))
 
-        ConfirmDialog(f'Delete “{title}”?', 'This permanently deletes the file from your phone. '
+        ConfirmDialog(tr('Delete “{title}”?').format(title=title), 'This permanently deletes the file from your phone. '
                       'It can\'t be undone.', 'Delete', confirm).open()
 
     def _drop_song(self, path):
@@ -1076,7 +1105,7 @@ class BeatSphereApp(App):
         self._save_library_data()
         self.load_tracks()
         self._sync_hidden_btn()
-        self.toast(f'{songs_label(count)} back in BeatSphere' if count else 'No hidden songs')
+        self.toast(tr('{songs} back in BeatSphere').format(songs=songs_label(count)) if count else 'No hidden songs')
 
     def toast(self, text):
         """Short message that fades in above the tab bar and fades out by itself."""
@@ -1213,7 +1242,7 @@ class BeatSphereApp(App):
         title = self.titles.get(path, self.state.current_track_title())
         artist = self.meta.get(path, {}).get('artist') or self.folder_name(path)
         if self.loaded_path is None:
-            artist = 'Cannot play this file'
+            artist = tr('Cannot play this file')
         cover = self.cover_for(path)
         playing = self.state.playing
         self.mini.title.text, self.mini.subtitle.text, self.mini.art.source = title, artist, cover

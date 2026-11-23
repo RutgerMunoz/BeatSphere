@@ -1,6 +1,7 @@
 """Popups: text prompt (rename), options sheet (song/playlist menu), confirm, info and the "Add songs" picker."""
 
 from kivy.clock import Clock
+from kivy.core.window import Window
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, ObjectProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
@@ -9,7 +10,9 @@ from kivy.uix.modalview import ModalView
 from kivy.uix.recycleboxlayout import RecycleBoxLayout
 from kivy.uix.recycleview import RecycleView
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
+from kivy.uix.scrollview import ScrollView
 
+from app.i18n import tr
 from app.ui.widgets import Card, Pressable, ThemedInput, ThemedLabel, animate
 
 
@@ -50,18 +53,24 @@ class OptionsSheet(ModalView):
 
     def __init__(self, title, options, **kwargs):
         row = dp(54)
-        super().__init__(size_hint=(0.96, None), height=dp(70) + row * len(options) + dp(12),
+        height = min(dp(70) + row * len(options) + dp(12), Window.height * 0.8)
+        super().__init__(size_hint=(0.96, None), height=height,
                          pos_hint={'center_x': 0.5, 'y': 0.02}, background_color=(0, 0, 0, 0),
                          overlay_color=(0, 0, 0, 0.55), **kwargs)
         card = Card(orientation='vertical', padding=dp(12), spacing=dp(6), radius=dp(26))
         card.add_widget(ThemedLabel(text=title, bold=True, font_size='17sp', size_hint_y=None, height=dp(34),
                                     shorten=True, padding=[dp(6), 0]))
+        buttons = BoxLayout(orientation='vertical', spacing=dp(6), size_hint_y=None)
+        buttons.bind(minimum_height=buttons.setter('height'))
         for label, callback in options:
             btn = Pressable(text=label, markup=True, size_hint_y=None, height=row - dp(6), radius=dp(16),
                             halign='left', valign='middle', padding=[dp(16), 0], bg_role='surface_alt')
             btn.bind(size=lambda w, *_: setattr(w, 'text_size', w.size))
             btn.bind(on_release=lambda _, cb=callback: self._choose(cb))
-            card.add_widget(btn)
+            buttons.add_widget(btn)
+        scroll = ScrollView(do_scroll_x=False, bar_width=dp(3))
+        scroll.add_widget(buttons)
+        card.add_widget(scroll)
         self.card = card
         self.add_widget(card)
 
@@ -190,7 +199,7 @@ class SongPicker(ModalView):
         self.list.data = [{'title': t.title, 'subtitle': self.subtitles.get(t.path, ''), 'path': t.path,
                            'selected': t.path in self.chosen, 'owner': self}
                           for t in self.tracks if query in t.title.lower()]
-        self.add_btn.text = f'Add {len(self.chosen)}' if self.chosen else 'Add'
+        self.add_btn.text = tr('Add {count}').format(count=len(self.chosen)) if self.chosen else 'Add'
 
     def toggle(self, path):
         self.chosen ^= {path}
