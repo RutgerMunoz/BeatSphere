@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="230" height="60" viewBox="0 0 230 60" role="img" aria-label="PayPal: Donate any amount">
+  <title>PayPal: Donate any amount</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#003087"/><stop offset="1" stop-color="#009CDE"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="round"><rect x="2" y="2" width="226" height="56" rx="16"/></clipPath>
+  </defs>
+  <rect x="2" y="4" width="226" height="56" rx="16" fill="#000" fill-opacity=".25"/>
+  <g clip-path="url(#round)">
+    <rect x="2" y="2" width="226" height="56" fill="url(#bg)"/>
+    <rect x="2" y="2" width="226" height="28.0" fill="#fff" fill-opacity=".10"/>
+    <rect x="-90" y="-10" width="60" height="80" fill="url(#shine)" transform="skewX(-20)">
+      <animate attributeName="x" values="-90;-90;290" keyTimes="0;.55;1" dur="3.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <rect x="2.5" y="2.5" width="225" height="55" rx="15.5" fill="none" stroke="#fff" stroke-opacity=".35"/>
+  
+      <g transform="translate(19 13)" font-family="Verdana, Arial, sans-serif" font-weight="900" font-style="italic">
+        <text x="5" y="29" font-size="30" fill="#7FD3FF">P</text>
+        <text x="0" y="25" font-size="30" fill="#fff">P</text>
+      </g>
+  <text x="62" y="28" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff">PayPal</text>
+  <text x="62" y="45" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#ffffff" fill-opacity=".85">Donate any amount</text>
+  <text x="208" y="36" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">›
+    <animate attributeName="x" values="208;212;208" dur="1.6s" repeatCount="indefinite"/>
+  </text>
+</svg>

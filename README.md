@@ -9,9 +9,9 @@
 </p>
 
 <p align="center">
-  <a href="https://ko-fi.com/rutgerdeveloper"><img src="https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20coffee-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support on Ko-fi"></a>
-  <a href="https://paypal.me/RutgerMunoz"><img src="https://img.shields.io/badge/PayPal-Donate-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal"></a>
-  <a href="https://liberapay.com/rutger_munoz"><img src="https://img.shields.io/badge/Liberapay-Support-F6C915?style=for-the-badge&logo=liberapay&logoColor=black" alt="Support on Liberapay"></a>
+  <a href="https://ko-fi.com/rutgerdeveloper"><img src="docs/buttons/donate-kofi.svg" alt="Ko-fi: Buy me a coffee" width="230"></a>
+  <a href="https://paypal.me/RutgerMunoz"><img src="docs/buttons/donate-paypal.svg" alt="PayPal: Donate any amount" width="230"></a>
+  <a href="https://liberapay.com/rutger_munoz"><img src="docs/buttons/donate-liberapay.svg" alt="Liberapay: Support every month" width="230"></a>
 </p>
 
 <p align="center">
@@ -36,6 +36,23 @@ styles, in your own language.
 - **Plays in the background.** Controls in the notification panel, on the lock screen and on headphones.
 - **Make it yours.** Six color styles, fonts, wallpapers and smooth animations you can turn off.
 - **28 languages.** Follows your phone's language, or choose one in Settings.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/songs.png" alt="All songs, A to Z, with covers" width="250"><br><sub><b>All your songs</b></sub></td>
+    <td align="center"><img src="docs/screenshots/now-playing.png" alt="Now Playing with the spinning cover" width="250"><br><sub><b>Now Playing</b></sub></td>
+    <td align="center"><img src="docs/screenshots/playlists.png" alt="Playlists with covers" width="250"><br><sub><b>Playlists</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/mix-spanish.png" alt="Mixes, in Spanish with the Purple Night style" width="250"><br><sub><b>Mixes · in your language</b></sub></td>
+    <td align="center"><img src="docs/screenshots/sunset-style.png" alt="The Sunset color style" width="250"><br><sub><b>Color styles</b></sub></td>
+    <td align="center"><img src="docs/screenshots/settings.png" alt="Settings: color styles, fonts and wallpapers" width="250"><br><sub><b>Make it yours</b></sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots use a demo library with made-up songs and original artwork.</sub>
 
 ## Support BeatSphere
 

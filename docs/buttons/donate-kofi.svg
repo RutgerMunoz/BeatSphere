@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="230" height="60" viewBox="0 0 230 60" role="img" aria-label="Ko-fi: Buy me a coffee">
+  <title>Ko-fi: Buy me a coffee</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FF5E5B"/><stop offset="1" stop-color="#FF9A5B"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset=".5" stop-color="#fff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="round"><rect x="2" y="2" width="226" height="56" rx="16"/></clipPath>
+  </defs>
+  <rect x="2" y="4" width="226" height="56" rx="16" fill="#000" fill-opacity=".25"/>
+  <g clip-path="url(#round)">
+    <rect x="2" y="2" width="226" height="56" fill="url(#bg)"/>
+    <rect x="2" y="2" width="226" height="28.0" fill="#fff" fill-opacity=".10"/>
+    <rect x="-90" y="-10" width="60" height="80" fill="url(#shine)" transform="skewX(-20)">
+      <animate attributeName="x" values="-90;-90;290" keyTimes="0;.55;1" dur="3.2s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  <rect x="2.5" y="2.5" width="225" height="55" rx="15.5" fill="none" stroke="#fff" stroke-opacity=".35"/>
+  
+      <g transform="translate(20 15)" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round">
+        <path d="M2 10h20v9a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8z" fill="#fff" fill-opacity=".18"/>
+        <path d="M22 13h3a4 4 0 0 1 0 8h-3"/>
+        <path d="M8 1c-2 2 2 3 0 6M14 1c-2 2 2 3 0 6">
+          <animate attributeName="opacity" values="1;.25;1" dur="2.4s" repeatCount="indefinite"/>
+        </path>
+        <path d="M12 21.5l-3.2-3.1a2 2 0 1 1 3.2-2.4 2 2 0 1 1 3.2 2.4z" fill="#fff" stroke="none"/>
+      </g>
+  <text x="62" y="28" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Ko-fi</text>
+  <text x="62" y="45" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="12" fill="#ffffff" fill-opacity=".85">Buy me a coffee</text>
+  <text x="208" y="36" text-anchor="middle" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">›
+    <animate attributeName="x" values="208;212;208" dur="1.6s" repeatCount="indefinite"/>
+  </text>
+</svg>
