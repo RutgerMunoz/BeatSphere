@@ -66,3 +66,18 @@ def test_tracks_from_index_filters_types_dedupes_and_sorts():
 
     paths = ['/m/Zebra.mp3', '/w/voice-note.opus', '/d/notes.txt', '/m/Zebra.mp3', '/m/apple_pie.FLAC']
     assert [t.title for t in tracks_from_index(paths)] == ['apple pie', 'voice note', 'Zebra']
+
+
+def test_album_art_lookup_survives_unlistable_folder(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from app.favorite_playlist_ui import FavoritePlaylistScreen
+
+    song = tmp_path / 'song.mp3'
+    song.write_bytes(b'')
+
+    def refuse(self):
+        raise PermissionError('listing blocked')
+
+    monkeypatch.setattr(Path, 'iterdir', refuse)
+    assert FavoritePlaylistScreen.resolve_album_art(str(song)) is None

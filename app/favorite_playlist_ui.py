@@ -55,7 +55,11 @@ class FavoritePlaylistScreen:
                 return str(candidate)
 
         # Only the standard album-folder names: a loose 'cover*' match put random pictures from Download on songs.
-        for candidate in sorted(track_file.parent.iterdir()):
+        try:
+            siblings = sorted(track_file.parent.iterdir())
+        except OSError:  # Android blocks listing some folders (WhatsApp, Android/media)
+            return None
+        for candidate in siblings:
             if candidate.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} \
                     and candidate.stem.lower() in {'cover', 'folder', 'front', 'album', 'albumart'}:
                 return str(candidate)

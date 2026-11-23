@@ -374,7 +374,7 @@ class BeatSphereApp(App):
         about.add_widget(Image(source='assets/icon.png', size_hint_x=None, width=dp(52)))
         about_texts = BoxLayout(orientation='vertical')
         about_texts.add_widget(ThemedLabel(text='BeatSphere', bold=True, font_size='16sp'))
-        about_texts.add_widget(ThemedLabel(text='Version 1.0.4', role='muted', font_size='12sp'))
+        about_texts.add_widget(ThemedLabel(text='Version 1.0.5', role='muted', font_size='12sp'))
         about.add_widget(about_texts)
         box.add_widget(Widget(size_hint_y=None, height=dp(6)))
         box.add_widget(about)
@@ -527,8 +527,13 @@ class BeatSphereApp(App):
                 self.covers.setdefault(track.path, cached['cover'])
             else:
                 self.covers.pop(track.path, None)  # new or edited file: read its art again
-                self.meta[track.path] = read_metadata(track.path)
-                cover = self.cover_for(track.path)  # embedded art -> list avatars
+                try:
+                    self.meta[track.path] = read_metadata(track.path)
+                    cover = self.cover_for(track.path)  # embedded art -> list avatars
+                except Exception:  # one unreadable song must not stop the covers of all the others
+                    Logger.exception('BeatSphere: cannot read %s', track.path)
+                    self.covers[track.path] = ''
+                    continue
                 self.song_info[track.path] = {'stamp': stamp, 'meta': self.meta[track.path], 'cover': cover}
                 changed += 1
                 if changed % 25 == 0:  # first run on a big library: show covers as they are found
