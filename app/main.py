@@ -52,6 +52,7 @@ from app.ui.widgets import (Card, ImageButton, NavBar, PlaylistTile, Pressable, 
                             ThemeSwatch, animate, gradient_texture)
 
 HEADER_HEIGHT = dp(56)
+SONGS_TOP_HEIGHT = dp(48 + 40 + 44 + 38 + 3 * 10)  # search, letters, actions, order rows + spacing
 TABS = [('Songs', '♫'), ('Playlists', '☰'), ('Folders', '▤'), ('Mix', '⇄'), ('Settings', '⚙')]
 
 
@@ -160,18 +161,27 @@ class BeatSphereApp(App):
 
     def watch_scroll(self, view):
         """Hides the header while a list is scrolled down; shows it again at the very top."""
-        view.bind(scroll_y=lambda *_: self._on_scroll(view))
+        view.bind(scroll_y=lambda *_: self._on_scroll(view), on_scroll_stop=self._on_scroll_stop)
         return view
 
+    def _on_scroll_stop(self, view, touch):
+        Clock.schedule_once(lambda dt: self._on_scroll(view))  # returns None: True would swallow the event
+
     def _on_scroll(self, view):
-        if view.children and view.children[0].height > view.height:  # lists too short to scroll keep the header
-            self.set_header_visible(view.scroll_y >= 0.995)
+        if view._touch:  # finger down: resizing the list now would move it under the finger and make it jitter
+            return
+        extra = view.children[0].height - view.height if view.children else 0
+        if extra > 0:  # lists too short to scroll keep the header
+            self.set_header_visible((1 - view.scroll_y) * extra < dp(40))  # pixels from the top, any list length
 
     def set_header_visible(self, visible):
         target = HEADER_HEIGHT if visible else 0
         if getattr(self, '_header_target', HEADER_HEIGHT) != target:
             self._header_target = target
             animate(self.header, 0.25, 'out_cubic', height=target, opacity=1 if visible else 0)
+            animate(self.songs_top, 0.25, 'out_cubic', height=SONGS_TOP_HEIGHT if visible else 0,
+                    opacity=1 if visible else 0)
+            self.songs_top.disabled = not visible  # hidden buttons must not catch taps meant for the list
 
     def show_tab(self, name):
         """Switches tabs with a slide-and-fade entrance."""
@@ -198,9 +208,12 @@ class BeatSphereApp(App):
 
     def _build_songs(self):
         page = self._page()
+        # search, letters and buttons: slide away with the logo bar while the song list is scrolled down
+        self.songs_top = BoxLayout(orientation='vertical', spacing=dp(10), size_hint_y=None, height=SONGS_TOP_HEIGHT)
+        page.add_widget(self.songs_top)
         self.search_input = ThemedInput(hint_text='Search songs...', size_hint_y=None, height=dp(48))
         self.search_input.bind(text=lambda *_: self.render_songs())
-        page.add_widget(self.search_input)
+        self.songs_top.add_widget(self.search_input)
 
         letters_scroll = ScrollView(do_scroll_y=False, size_hint_y=None, height=dp(40), bar_width=0)
         letters = BoxLayout(size_hint_x=None, spacing=dp(6))
@@ -213,7 +226,7 @@ class BeatSphereApp(App):
             self.letter_chips[letter] = chip
             letters.add_widget(chip)
         letters_scroll.add_widget(letters)
-        page.add_widget(letters_scroll)
+        self.songs_top.add_widget(letters_scroll)
 
         actions = BoxLayout(size_hint_y=None, height=dp(44), spacing=dp(8))
         self.song_count = ThemedLabel(role='muted', font_size='13sp')
@@ -225,7 +238,7 @@ class BeatSphereApp(App):
         play_all.bind(on_release=lambda *_: self.play_collection(self.song_list.paths))
         for widget in (self.song_count, shuffle, play_all):
             actions.add_widget(widget)
-        page.add_widget(actions)
+        self.songs_top.add_widget(actions)
 
         order = BoxLayout(size_hint_y=None, height=dp(38), spacing=dp(6))
         self.sort_chips = {}
@@ -243,7 +256,7 @@ class BeatSphereApp(App):
                                         radius=dp(19))
         self.edit_order_btn.bind(on_release=lambda *_: self.toggle_song_editing())
         order.add_widget(self.edit_order_btn)
-        page.add_widget(order)
+        self.songs_top.add_widget(order)
 
         self.song_list = self.make_song_list(on_reorder=self._songs_reordered)
         page.add_widget(self.song_list)
@@ -361,7 +374,7 @@ class BeatSphereApp(App):
         about.add_widget(Image(source='assets/icon.png', size_hint_x=None, width=dp(52)))
         about_texts = BoxLayout(orientation='vertical')
         about_texts.add_widget(ThemedLabel(text='BeatSphere', bold=True, font_size='16sp'))
-        about_texts.add_widget(ThemedLabel(text='Version 1.0.3', role='muted', font_size='12sp'))
+        about_texts.add_widget(ThemedLabel(text='Version 1.0.4', role='muted', font_size='12sp'))
         about.add_widget(about_texts)
         box.add_widget(Widget(size_hint_y=None, height=dp(6)))
         box.add_widget(about)
@@ -464,6 +477,10 @@ class BeatSphereApp(App):
         self.file_titles = {track.path: track.title for track in tracks}
         for track in tracks:
             track.title = self.custom_titles.get(track.path, track.title)
+            cached = self.song_info.get(track.path)
+            if cached:  # last launch's covers and details, so the first screen already shows them
+                self.covers.setdefault(track.path, cached['cover'])
+                self.meta.setdefault(track.path, cached['meta'])
         self.tracks = sort_tracks(tracks)
         self.titles = {track.path: track.title for track in self.tracks}
         if not self.state.track_paths:
@@ -497,7 +514,7 @@ class BeatSphereApp(App):
 
     def _read_all_metadata(self, tracks):
         """Artist/album/length and embedded cover per song, cached between launches by file size and date."""
-        changed = False
+        changed = 0
         for track in tracks:
             try:
                 stat = os.stat(track.path)
@@ -509,10 +526,13 @@ class BeatSphereApp(App):
                 self.meta[track.path] = cached['meta']
                 self.covers.setdefault(track.path, cached['cover'])
             else:
+                self.covers.pop(track.path, None)  # new or edited file: read its art again
                 self.meta[track.path] = read_metadata(track.path)
                 cover = self.cover_for(track.path)  # embedded art -> list avatars
                 self.song_info[track.path] = {'stamp': stamp, 'meta': self.meta[track.path], 'cover': cover}
-                changed = True
+                changed += 1
+                if changed % 25 == 0:  # first run on a big library: show covers as they are found
+                    Clock.schedule_once(lambda dt: self.refresh_lists())
                 time.sleep(0.002)  # yield to the UI thread between files
         if changed:
             Clock.schedule_once(lambda dt: self.meta_store.put('songs', info=self.song_info))
